@@ -43,7 +43,7 @@ def estrai_dati(isin):
 
         # Cedola semestrale
         cedola_str = driver.find_element(By.XPATH, cedola_xpath).text.strip().replace(",", ".").replace("%", "")
-        cedola_semestrale = float(cedola_str) / 2
+        cedola_semestrale = float(cedola_str)
 
         # Scadenza
         scadenza_text = driver.find_element(By.XPATH, scadenza_xpath).text.strip()
