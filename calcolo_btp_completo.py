@@ -1,113 +1,96 @@
-import openpyxl
+import csv
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-import time
-import csv
 from github import Github
-from datetime import datetime, date
-from dateutil.relativedelta import relativedelta
+import time
 
-# === CONFIG ===
-EXCEL_FILE = "Fromule calcolatore rendimenti Bond copia.xlsx"
-CSV_FILE = "prezzi_completi.csv"
+# === CONFIGURAZIONE ===
+ISIN_LIST = ["IT0005496048", "IT0005514473", "IT0005530032"]
+CSV_FILE = "dati_btp.csv"
 import os
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-
+GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]
 REPO_NAME = "LindorMore/dati_titoli_stato"
-COMMIT_MESSAGE = f"Aggiornamento automatico {datetime.now().isoformat()}"
+COMMIT_MESSAGE = f"Aggiornamento {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
-# === CARICA EXCEL ===
-workbook = openpyxl.load_workbook(EXCEL_FILE)
-foglio = workbook.active
-
-# === Estrai ISIN dalla riga 2 ===
-isin_list = []
-colonna = 2
-while True:
-    cella = foglio.cell(row=2, column=colonna)
-    if cella.value is None:
-        break
-    isin_list.append((colonna, str(cella.value).strip()))
-    colonna += 1
-
-# === Configura Selenium ===
+# === SELENIUM ===
 options = Options()
 options.add_argument("--headless")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
-service = Service()
-driver = webdriver.Chrome(service=service, options=options)
+driver = webdriver.Chrome(options=options)
 
-# === CSV HEADER ===
-righe_csv = [["ISIN", "Prezzo", "Cedola Semestrale %", "Cedola Annua €", "Cedola Annua % su Prezzo", "Scadenza", "Mesi Residui", "Cedole Residue", "Totale Cedole Residue €", "Rendimento Totale %", "Rendimento Annuo %"]]
-
-# === Estrai e Calcola ===
-for col, isin in isin_list:
+# === FUNZIONE PER ESTRARRE I DATI DA BORSA ITALIANA ===
+def estrai_dati(isin):
+    url = f"https://www.borsaitaliana.it/borsa/obbligazioni/mot/btp/scheda/{isin}.html"
+    driver.get(url)
+    time.sleep(7)
     try:
-        url = f"https://www.borsaitaliana.it/borsa/obbligazioni/mot/btp/scheda/{isin}.html"
-        driver.get(url)
-        time.sleep(6)
+        prezzo_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[5]/article/div/div[2]/div[1]/table/tbody/tr[1]/td[2]/span'
+        cedola_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[9]/td[2]/span'
+        scadenza_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[5]/td[2]/span'
 
-        # Prezzo
-        prezzo = float(driver.find_element(By.XPATH, '//*[@id="fullcontainer"]/main/section/div[4]/div[5]/article/div/div[2]/div[1]/table/tbody/tr[1]/td[2]/span').text.replace(',', '.'))
+        prezzo = float(driver.find_element(By.XPATH, prezzo_xpath).text.replace(",", "."))
+        cedola_str = driver.find_element(By.XPATH, cedola_xpath).text.strip().replace(",", ".").replace("%", "")
+        cedola_semestrale = float(cedola_str) / 2
+        scadenza_text = driver.find_element(By.XPATH, scadenza_xpath).text.strip()
+        scadenza_data = datetime.strptime(scadenza_text, "%d/%m/%Y")
 
-        # Cedola Semestrale %
-        cedola_semestrale_pct = float(driver.find_element(By.XPATH, '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[9]/td[2]/span').text.replace(',', '.'))
-
-        # Scadenza
-        scadenza_txt = driver.find_element(By.XPATH, '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[5]/td[2]/span').text.strip()
-        scadenza = datetime.strptime(scadenza_txt, "%d/%m/%Y").date()
-
-        # Calcoli
-        oggi = date.today()
-        mesi_residui = (scadenza.year - oggi.year) * 12 + (scadenza.month - oggi.month)
-        if scadenza.day < oggi.day:
-            mesi_residui -= 1
-
-        cedole_residue = mesi_residui // 6
-        cedola_annua_euro = (cedola_semestrale_pct * 2)
-        cedola_totale_residua = cedola_semestrale_pct * cedole_residue
-        rendimento_totale = ((cedola_totale_residua + 100 - prezzo) / prezzo) * 100
-        rendimento_annuo = rendimento_totale / (mesi_residui / 12) if mesi_residui > 0 else 0
-        cedola_pct_sul_prezzo = (cedola_annua_euro / prezzo) * 100
-
-        righe_csv.append([
-            isin,
-            round(prezzo, 3),
-            round(cedola_semestrale_pct, 3),
-            round(cedola_annua_euro, 3),
-            round(cedola_pct_sul_prezzo, 3),
-            scadenza.strftime("%Y-%m-%d"),
-            mesi_residui,
-            cedole_residue,
-            round(cedola_totale_residua, 3),
-            round(rendimento_totale, 3),
-            round(rendimento_annuo, 3)
-        ])
-
-        print(f"✅ {isin}: Prezzo {prezzo}, Cedola {cedola_semestrale_pct}%")
-
+        return prezzo, cedola_semestrale, scadenza_data
     except Exception as e:
-        print(f"❌ Errore per {isin}: {e}")
+        print(f"❌ Errore per ISIN {isin}: {e}")
+        return None, None, None
+
+# === CALCOLI ===
+def calcoli(isin, prezzo, cedola_semestrale, scadenza_data):
+    oggi = datetime.now()
+    mesi_alla_scadenza = (scadenza_data.year - oggi.year) * 12 + scadenza_data.month - oggi.month
+    n_cedole = mesi_alla_scadenza // 6
+    totale_cedole = cedola_semestrale * n_cedole
+    rendimento_totale = ((totale_cedole + 100 - prezzo) / prezzo) * 100
+    anni_alla_scadenza = mesi_alla_scadenza / 12
+    rendimento_annuo = rendimento_totale / anni_alla_scadenza if anni_alla_scadenza > 0 else 0
+    cedola_annua_su_prezzo = (cedola_semestrale * 2 / prezzo) * 100
+    return [
+        isin,
+        round(prezzo, 2),
+        round(cedola_semestrale, 2),
+        round(cedola_annua_su_prezzo, 2),
+        scadenza_data.strftime("%d/%m/%Y"),
+        mesi_alla_scadenza,
+        round(rendimento_totale, 2),
+        round(rendimento_annuo, 2)
+    ]
+
+# === ESTRAZIONE ===
+dati_finali = [["ISIN", "Prezzo", "Cedola Semestrale", "Cedola Annua %", "Scadenza", "Mesi Scadenza", "Rend. Totale %", "Rend. Annuo %"]]
+
+for isin in ISIN_LIST:
+    print(f"🔎 Elaborazione {isin}...")
+    prezzo, cedola_semestrale, scadenza = estrai_dati(isin)
+    if prezzo is not None:
+        dati_finali.append(calcoli(isin, prezzo, cedola_semestrale, scadenza))
 
 driver.quit()
 
-# === Salva CSV ===
+# === SCRITTURA FILE CSV ===
 with open(CSV_FILE, "w", newline="") as f:
     writer = csv.writer(f)
-    writer.writerows(righe_csv)
+    writer.writerows(dati_finali)
 
-# === Carica su GitHub ===
+print("✅ File CSV generato.")
+
+# === UPLOAD SU GITHUB ===
 g = Github(GITHUB_TOKEN)
 repo = g.get_repo(REPO_NAME)
 with open(CSV_FILE, "r") as f:
-    content = f.read()
+    contenuto = f.read()
     try:
-        file_github = repo.get_contents(CSV_FILE)
-        repo.update_file(CSV_FILE, COMMIT_MESSAGE, content, file_github.sha)
+        file_esistente = repo.get_contents(CSV_FILE)
+        repo.update_file(CSV_FILE, COMMIT_MESSAGE, contenuto, file_esistente.sha)
         print("🔁 File aggiornato su GitHub.")
     except:
-        repo.create_file(CSV_FILE, COMMIT_MESSAGE, content)
+        repo.create_file(CSV_FILE, COMMIT_MESSAGE, contenuto)
         print("🆕 File caricato su GitHub.")
