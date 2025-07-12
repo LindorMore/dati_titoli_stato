@@ -8,8 +8,8 @@ from github import Github
 import time
 import os
 
-# === CONFIGURAZIONE ===
-ISIN_LIST = ["IT0005445306", "IT0005514473", "IT0005530032"]
+# === CONFIG ===
+ISIN_LIST = ["IT0005445306", "IT0005496048", "IT0005514473", "IT0005530032"]
 CSV_FILE = "dati_btp.csv"
 GITHUB_TOKEN = os.environ["MY_GITHUB_TOKEN"]
 REPO_NAME = "LindorMore/dati_titoli_stato"
@@ -22,32 +22,37 @@ options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 driver = webdriver.Chrome(options=options)
 
-# === FUNZIONE PER ESTRARRE I DATI DA BORSA ITALIANA ===
+# === ESTRAZIONE DATI DA BORSA ITALIANA ===
 def estrai_dati(isin):
     url = f"https://www.borsaitaliana.it/borsa/obbligazioni/mot/btp/scheda/{isin}.html"
     driver.get(url)
     time.sleep(7)
-    try:
-        # Prova a prendere il prezzo live
-        try:
-            prezzo_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[5]/article/div/div[2]/div[1]/table/tbody/tr[1]/td[2]/span'
-            prezzo = float(driver.find_element(By.XPATH, prezzo_xpath).text.replace(",", "."))
-        except:
-            # Fallback sul prezzo di chiusura
-            prezzo_chiusura_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[6]/article[1]/div/div[2]/table/tbody/tr[6]/td[2]/span'
-            prezzo = float(driver.find_element(By.XPATH, prezzo_chiusura_xpath).text.replace(",", "."))
 
+    try:
+        # XPaths aggiornati
+        prezzo_live_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[1]/article/div/div/div[2]/div/span[1]/strong'
+        prezzo_chiusura_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[5]/article/div/div[2]/div[1]/table/tbody/tr[1]/td[2]/span'
         cedola_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[9]/td[2]/span'
         scadenza_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[5]/td[2]/span'
 
+        # Prezzo: prima prova il live, poi il prezzo di chiusura
+        try:
+            prezzo = float(driver.find_element(By.XPATH, prezzo_live_xpath).text.replace(",", "."))
+        except:
+            prezzo = float(driver.find_element(By.XPATH, prezzo_chiusura_xpath).text.replace(",", "."))
+
+        # Cedola semestrale
         cedola_str = driver.find_element(By.XPATH, cedola_xpath).text.strip().replace(",", ".").replace("%", "")
         cedola_semestrale = float(cedola_str) / 2
 
+        # Scadenza
         scadenza_text = driver.find_element(By.XPATH, scadenza_xpath).text.strip()
-        try:
-            scadenza_data = datetime.strptime(scadenza_text, "%d/%m/%Y")
-        except ValueError:
+
+        # Supporta date con anno a 2 cifre
+        if len(scadenza_text.split("/")[-1]) == 2:
             scadenza_data = datetime.strptime(scadenza_text, "%d/%m/%y")
+        else:
+            scadenza_data = datetime.strptime(scadenza_text, "%d/%m/%Y")
 
         return prezzo, cedola_semestrale, scadenza_data
 
@@ -76,7 +81,7 @@ def calcoli(isin, prezzo, cedola_semestrale, scadenza_data):
         round(rendimento_annuo, 2)
     ]
 
-# === ESTRAZIONE ===
+# === ESTRAZIONE E CALCOLO ===
 dati_finali = [["ISIN", "Prezzo", "Cedola Semestrale", "Cedola Annua %", "Scadenza", "Mesi Scadenza", "Rend. Totale %", "Rend. Annuo %"]]
 
 for isin in ISIN_LIST:
@@ -87,14 +92,14 @@ for isin in ISIN_LIST:
 
 driver.quit()
 
-# === SCRITTURA FILE CSV ===
+# === CSV ===
 with open(CSV_FILE, "w", newline="") as f:
     writer = csv.writer(f)
     writer.writerows(dati_finali)
 
 print("✅ File CSV generato.")
 
-# === UPLOAD SU GITHUB ===
+# === GITHUB UPLOAD ===
 g = Github(GITHUB_TOKEN)
 repo = g.get_repo(REPO_NAME)
 with open(CSV_FILE, "r") as f:
@@ -106,3 +111,4 @@ with open(CSV_FILE, "r") as f:
     except:
         repo.create_file(CSV_FILE, COMMIT_MESSAGE, contenuto)
         print("🆕 File caricato su GitHub.")
+
