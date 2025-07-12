@@ -11,7 +11,7 @@ import time
 ISIN_LIST = ["IT0005496048", "IT0005514473", "IT0005530032"]
 CSV_FILE = "dati_btp.csv"
 import os
-GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]
+GITHUB_TOKEN = os.environ["MY_GITHUB_TOKEN"]
 REPO_NAME = "LindorMore/dati_titoli_stato"
 COMMIT_MESSAGE = f"Aggiornamento {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
