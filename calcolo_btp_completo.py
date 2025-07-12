@@ -9,7 +9,7 @@ import time
 import os
 
 # === CONFIGURAZIONE ===
-ISIN_LIST = ["IT0005496048", "IT0005514473", "IT0005530032"]
+ISIN_LIST = ["IT0005445306", "IT0005514473", "IT0005530032"]
 CSV_FILE = "dati_btp.csv"
 GITHUB_TOKEN = os.environ["MY_GITHUB_TOKEN"]
 REPO_NAME = "LindorMore/dati_titoli_stato"
@@ -27,26 +27,27 @@ def estrai_dati(isin):
     url = f"https://www.borsaitaliana.it/borsa/obbligazioni/mot/btp/scheda/{isin}.html"
     driver.get(url)
     time.sleep(7)
-
     try:
-        # XPaths
-        prezzo_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[5]/article/div/div[2]/div[1]/table/tbody/tr[1]/td[2]/span'
-        prezzo_chiusura_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[6]/article[1]/div/div[2]/table/tbody/tr[6]/td[2]/span'
+        # Prova a prendere il prezzo live
+        try:
+            prezzo_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[5]/article/div/div[2]/div[1]/table/tbody/tr[1]/td[2]/span'
+            prezzo = float(driver.find_element(By.XPATH, prezzo_xpath).text.replace(",", "."))
+        except:
+            # Fallback sul prezzo di chiusura
+            prezzo_chiusura_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[6]/article[1]/div/div[2]/table/tbody/tr[6]/td[2]/span'
+            prezzo = float(driver.find_element(By.XPATH, prezzo_chiusura_xpath).text.replace(",", "."))
+
         cedola_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[9]/td[2]/span'
         scadenza_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[5]/td[2]/span'
 
-        # Prezzo attuale → se non c'è, usa prezzo di chiusura
-        try:
-            prezzo = float(driver.find_element(By.XPATH, prezzo_xpath).text.replace(",", "."))
-        except:
-            prezzo = float(driver.find_element(By.XPATH, prezzo_chiusura_xpath).text.replace(",", "."))
-            print(f"ℹ️ Usato prezzo di chiusura per ISIN {isin}")
-
-        # Cedola e scadenza
         cedola_str = driver.find_element(By.XPATH, cedola_xpath).text.strip().replace(",", ".").replace("%", "")
         cedola_semestrale = float(cedola_str) / 2
+
         scadenza_text = driver.find_element(By.XPATH, scadenza_xpath).text.strip()
-        scadenza_data = datetime.strptime(scadenza_text, "%d/%m/%Y")
+        try:
+            scadenza_data = datetime.strptime(scadenza_text, "%d/%m/%Y")
+        except ValueError:
+            scadenza_data = datetime.strptime(scadenza_text, "%d/%m/%y")
 
         return prezzo, cedola_semestrale, scadenza_data
 
@@ -75,7 +76,7 @@ def calcoli(isin, prezzo, cedola_semestrale, scadenza_data):
         round(rendimento_annuo, 2)
     ]
 
-# === ESTRAZIONE E CALCOLO ===
+# === ESTRAZIONE ===
 dati_finali = [["ISIN", "Prezzo", "Cedola Semestrale", "Cedola Annua %", "Scadenza", "Mesi Scadenza", "Rend. Totale %", "Rend. Annuo %"]]
 
 for isin in ISIN_LIST:
