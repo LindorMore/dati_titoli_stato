@@ -1,4 +1,4 @@
 selenium
 openpyxl
 PyGithub
-python-dateutil
+python_dateutil
