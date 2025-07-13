@@ -1,49 +1,66 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Rendimenti Titoli di Stato</title>
+  <meta charset="UTF-8">
+  <title>Analisi Titoli di Stato</title>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/fixedheader/3.4.0/css/fixedHeader.dataTables.min.css">
   <style>
-    body { font-family: Arial, sans-serif; padding: 2em; background: #f6f6f6; }
-    table { border-collapse: collapse; width: 100%; margin-top: 1em; background: white; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-    th { background-color: #007BFF; color: white; }
-    input { margin-bottom: 10px; padding: 5px; width: 300px; }
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h1 { text-align: center; margin-bottom: 30px; }
+    table { width: 100%; }
   </style>
 </head>
 <body>
-  <h1>📈 Rendimenti Titoli di Stato</h1>
-  <input type="text" id="search" placeholder="🔍 Cerca ISIN, rendimento, scadenza..." onkeyup="filterTable()"/>
-
-  <table id="btpTable">
-    <thead></thead>
-    <tbody></tbody>
+  <h1>Analisi Titoli di Stato</h1>
+  <table id="btpTable" class="display">
+    <thead>
+      <tr>
+        <th>ISIN</th>
+        <th>Prezzo</th>
+        <th>Cedola Sem.</th>
+        <th>Cedola Annua %</th>
+        <th>Scadenza</th>
+        <th>Mesi Scadenza</th>
+        <th>Rend. Totale %</th>
+        <th>Rend. Annuo %</th>
+      </tr>
+    </thead>
   </table>
 
+  <!-- Script JS -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/yadcf/0.9.4/jquery.dataTables.yadcf.min.js"></script>
   <script>
-    async function loadCSV() {
-      const response = await fetch("https://raw.githubusercontent.com/LindorMore/dati_titoli_stato/main/dati_btp.csv");
-      const text = await response.text();
-      const rows = text.trim().split("\n").map(row => row.split(","));
-      const [header, ...data] = rows;
-
-      const thead = document.querySelector("#btpTable thead");
-      const tbody = document.querySelector("#btpTable tbody");
-      thead.innerHTML = "<tr>" + header.map(col => `<th>${col}</th>`).join("") + "</tr>";
-      tbody.innerHTML = data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("");
-    }
-
-    function filterTable() {
-      const input = document.getElementById("search").value.toLowerCase();
-      const rows = document.querySelectorAll("#btpTable tbody tr");
-      rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(input) ? "" : "none";
+    $(document).ready(function () {
+      var table = $('#btpTable').DataTable({
+        ajax: 'dati_btp.csv',
+        columns: [
+          { data: 'ISIN' },
+          { data: 'Prezzo' },
+          { data: 'Cedola Semestrale' },
+          { data: 'Cedola Annua %' },
+          { data: 'Scadenza' },
+          { data: 'Mesi Scadenza' },
+          { data: 'Rend. Totale %' },
+          { data: 'Rend. Annuo %' }
+        ],
+        responsive: true,
+        fixedHeader: true
       });
-    }
 
-    loadCSV();
+      yadcf.init(table, [
+        { column_number: 0, filter_type: 'text', filter_default_label: 'Cerca ISIN' },
+        { column_number: 1, filter_type: 'range_number', filter_default_label: ['Min', 'Max'] },
+        { column_number: 2, filter_type: 'range_number' },
+        { column_number: 3, filter_type: 'range_number' },
+        { column_number: 4, filter_type: 'text', filter_default_label: 'GG/MM/AAAA' },
+        { column_number: 5, filter_type: 'range_number' },
+        { column_number: 6, filter_type: 'range_number' },
+        { column_number: 7, filter_type: 'range_number' }
+      ]);
+    });
   </script>
 </body>
 </html>
