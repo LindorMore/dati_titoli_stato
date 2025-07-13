@@ -34,8 +34,9 @@ def estrai_dati(isin):
         prezzo_chiusura_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[5]/article/div/div[2]/div[1]/table/tbody/tr[1]/td[2]/span'
         cedola_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[9]/td[2]/span'
         scadenza_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[5]/td[2]/span'
+        nazione_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[1]/table/tbody/tr[2]/td[2]/span'
 
-        # Prezzo: prima prova il live, poi il prezzo di chiusura
+        # Prezzo: live o chiusura
         try:
             prezzo = float(driver.find_element(By.XPATH, prezzo_live_xpath).text.replace(",", "."))
         except:
@@ -47,21 +48,22 @@ def estrai_dati(isin):
 
         # Scadenza
         scadenza_text = driver.find_element(By.XPATH, scadenza_xpath).text.strip()
-
-        # Supporta date con anno a 2 cifre
         if len(scadenza_text.split("/")[-1]) == 2:
             scadenza_data = datetime.strptime(scadenza_text, "%d/%m/%y")
         else:
             scadenza_data = datetime.strptime(scadenza_text, "%d/%m/%Y")
 
-        return prezzo, cedola_semestrale, scadenza_data
+        # Nazione
+        nazione = driver.find_element(By.XPATH, nazione_xpath).text.strip()
+
+        return prezzo, cedola_semestrale, scadenza_data, nazione
 
     except Exception as e:
         print(f"❌ Errore per ISIN {isin}: {e}")
-        return None, None, None
+        return None, None, None, None
 
 # === CALCOLI ===
-def calcoli(isin, prezzo, cedola_semestrale, scadenza_data):
+def calcoli(isin, prezzo, cedola_semestrale, scadenza_data, nazione):
     oggi = datetime.now()
     mesi_alla_scadenza = (scadenza_data.year - oggi.year) * 12 + scadenza_data.month - oggi.month
     n_cedole = mesi_alla_scadenza // 6
@@ -78,17 +80,18 @@ def calcoli(isin, prezzo, cedola_semestrale, scadenza_data):
         scadenza_data.strftime("%d/%m/%Y"),
         mesi_alla_scadenza,
         round(rendimento_totale, 2),
-        round(rendimento_annuo, 2)
+        round(rendimento_annuo, 2),
+        nazione
     ]
 
 # === ESTRAZIONE E CALCOLO ===
-dati_finali = [["ISIN", "Prezzo", "Cedola Semestrale", "Cedola Annua %", "Scadenza", "Mesi Scadenza", "Rend. Totale %", "Rend. Annuo %"]]
+dati_finali = [["ISIN", "Prezzo", "Cedola Semestrale", "Cedola Annua %", "Scadenza", "Mesi Scadenza", "Rend. Totale %", "Rend. Annuo %", "Nazione"]]
 
 for isin in ISIN_LIST:
     print(f"🔎 Elaborazione {isin}...")
-    prezzo, cedola_semestrale, scadenza = estrai_dati(isin)
+    prezzo, cedola_semestrale, scadenza, nazione = estrai_dati(isin)
     if prezzo is not None:
-        dati_finali.append(calcoli(isin, prezzo, cedola_semestrale, scadenza))
+        dati_finali.append(calcoli(isin, prezzo, cedola_semestrale, scadenza, nazione))
 
 driver.quit()
 
