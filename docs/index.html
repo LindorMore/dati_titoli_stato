@@ -11,6 +11,9 @@
       padding: 2em;
       background: #f6f6f6;
     }
+    h1 {
+      text-align: center;
+    }
     table {
       border-collapse: collapse;
       width: 100%;
@@ -26,6 +29,11 @@
       background-color: #007BFF;
       color: white;
       cursor: pointer;
+      position: relative;
+    }
+    th .sort-icon {
+      font-size: 0.7em;
+      margin-left: 5px;
     }
     input, select {
       margin: 5px;
@@ -44,11 +52,13 @@
 
   <div class="filter-container">
     <label for="isinSelect">ISIN:</label>
+    <input type="text" id="isinSearch" placeholder="Cerca ISIN" onkeyup="updateDropdown('isinSelect', this.value)">
     <select id="isinSelect" onchange="filterTable()">
       <option value="">Tutti</option>
     </select>
 
     <label for="nazioneSelect">Nazione:</label>
+    <input type="text" id="nazioneSearch" placeholder="Cerca Nazione" onkeyup="updateDropdown('nazioneSelect', this.value)">
     <select id="nazioneSelect" onchange="filterTable()">
       <option value="">Tutte</option>
     </select>
@@ -61,34 +71,50 @@
 
   <script>
     let tableData = [];
+    let fullIsinList = [];
+    let fullNazioneList = [];
     let sortCol = -1;
     let sortAsc = true;
+    let headers = [];
+    let nazioneIndex = -1;
 
     async function loadCSV() {
       const response = await fetch("https://raw.githubusercontent.com/LindorMore/dati_titoli_stato/main/dati_btp.csv");
       const text = await response.text();
       const rows = text.trim().split("\n").map(row => row.split(","));
-      const [header, ...data] = rows;
-      tableData = data;
+      [headers, ...tableData] = rows;
+
+      nazioneIndex = headers.length - 1; // Supponiamo che l'ultima colonna sia la Nazione
 
       const thead = document.querySelector("#btpTable thead");
-      thead.innerHTML = "<tr>" + header.map((col, i) => `<th onclick="sortTable(${i})">${col}</th>`).join("") + "</tr>";
+      thead.innerHTML = "<tr>" + headers.map((col, i) => `
+        <th onclick="sortTable(${i})">${col}<span class="sort-icon" id="icon-${i}"></span></th>
+      `).join("") + "</tr>";
 
-      populateSelect("isinSelect", data.map(row => row[0]));
-      populateSelect("nazioneSelect", data.map(row => row[1]));
+      fullIsinList = [...new Set(tableData.map(row => row[0]))].sort();
+      fullNazioneList = [...new Set(tableData.map(row => row[nazioneIndex]))].sort();
 
-      renderTable(data);
+      populateSelect("isinSelect", fullIsinList);
+      populateSelect("nazioneSelect", fullNazioneList);
+
+      renderTable(tableData);
     }
 
     function populateSelect(id, values) {
       const select = document.getElementById(id);
-      const uniqueValues = [...new Set(values)].sort();
-      uniqueValues.forEach(val => {
+      select.innerHTML = '<option value="">Tutti</option>';
+      values.forEach(val => {
         const opt = document.createElement("option");
         opt.value = val;
         opt.textContent = val;
         select.appendChild(opt);
       });
+    }
+
+    function updateDropdown(id, searchValue) {
+      const list = id === 'isinSelect' ? fullIsinList : fullNazioneList;
+      const filtered = list.filter(v => v.toLowerCase().includes(searchValue.toLowerCase()));
+      populateSelect(id, filtered);
     }
 
     function renderTable(data) {
@@ -101,7 +127,7 @@
       const nazVal = document.getElementById("nazioneSelect").value;
       let filtered = tableData;
       if (isinVal) filtered = filtered.filter(row => row[0] === isinVal);
-      if (nazVal) filtered = filtered.filter(row => row[1] === nazVal);
+      if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
       renderTable(filtered);
     }
 
@@ -109,9 +135,13 @@
       if (sortCol === index) {
         sortAsc = !sortAsc;
       } else {
+        document.querySelectorAll(".sort-icon").forEach(el => el.textContent = "");
         sortCol = index;
         sortAsc = true;
       }
+      const icon = document.getElementById(`icon-${index}`);
+      icon.textContent = sortAsc ? "🔼" : "🔽";
+
       tableData.sort((a, b) => {
         const valA = isNaN(a[index]) ? a[index] : parseFloat(a[index]);
         const valB = isNaN(b[index]) ? b[index] : parseFloat(b[index]);
