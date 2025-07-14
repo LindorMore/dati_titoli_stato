@@ -40,17 +40,20 @@
       margin: 5px;
       padding: 5px;
     }
+    .filter-wrapper {
+      background: #fff;
+      padding: 15px;
+      border: 1px solid #ccc;
+      margin-bottom: 20px;
+    }
     .filter-container {
       margin-bottom: 10px;
-      background: #fff;
-      padding: 10px;
-      border: 1px solid #ccc;
     }
     .range-filters {
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
-      padding: 10px;
+      padding: 10px 0;
       align-items: flex-end;
     }
     .range-filters label {
@@ -75,6 +78,8 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
+      float: right;
+      margin-top: 10px;
     }
     #resetButton:hover {
       background-color: #c82333;
@@ -84,20 +89,22 @@
 <body>
   <h1>📈 Rendimenti Titoli di Stato</h1>
 
-  <div class="filter-container">
-    <label for="isinSearch">Cerca ISIN:</label>
-    <input type="text" id="isinSearch" placeholder="Cerca ISIN" onkeyup="filterTable()">
+  <div class="filter-wrapper">
+    <div class="filter-container">
+      <label for="isinSearch">Cerca ISIN:</label>
+      <input type="text" id="isinSearch" placeholder="Cerca ISIN" onkeyup="filterTable()">
 
-    <label for="nazioneSelect">Nazione:</label>
-    <input type="text" id="nazioneSearch" placeholder="Cerca Nazione" onkeyup="updateDropdown('nazioneSelect', this.value)">
-    <select id="nazioneSelect" onchange="filterTable()">
-      <option value="">Tutte</option>
-    </select>
-  </div>
+      <label for="nazioneSearch">Nazione:</label>
+      <input type="text" id="nazioneSearch" placeholder="Cerca Nazione" onkeyup="updateDropdown('nazioneSelect', this.value)">
+      <select id="nazioneSelect" onchange="filterTable()">
+        <option value="">Tutte</option>
+      </select>
+    </div>
 
-  <div class="range-filters" id="rangeFilters"></div>
-  <div style="text-align: right; padding: 0 10px;">
+    <div class="range-filters" id="rangeFilters"></div>
+
     <button id="resetButton" onclick="resetFilters()">Reset</button>
+    <div style="clear: both;"></div>
   </div>
 
   <table id="btpTable">
