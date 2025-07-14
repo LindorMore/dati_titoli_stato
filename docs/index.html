@@ -75,29 +75,29 @@
     let fullNazioneList = [];
     let sortCol = -1;
     let sortAsc = true;
-    let headers = [];
-    let nazioneIndex = -1;
 
     async function loadCSV() {
       const response = await fetch("https://raw.githubusercontent.com/LindorMore/dati_titoli_stato/main/dati_btp.csv");
       const text = await response.text();
       const rows = text.trim().split("\n").map(row => row.split(","));
-      [headers, ...tableData] = rows;
-
-      nazioneIndex = headers.length - 1; // Supponiamo che l'ultima colonna sia la Nazione
+      const [header, ...data] = rows;
+      tableData = data;
 
       const thead = document.querySelector("#btpTable thead");
-      thead.innerHTML = "<tr>" + headers.map((col, i) => `
-        <th onclick="sortTable(${i})">${col}<span class="sort-icon" id="icon-${i}"></span></th>
+      thead.innerHTML = "<tr>" + header.map((col, i) => `
+        <th onclick="sortTable(${i})">
+          ${col}<span class="sort-icon" id="icon-${i}">⇅</span>
+        </th>
       `).join("") + "</tr>";
 
-      fullIsinList = [...new Set(tableData.map(row => row[0]))].sort();
-      fullNazioneList = [...new Set(tableData.map(row => row[nazioneIndex]))].sort();
+      const nazioneIndex = header.length - 1;
+      fullIsinList = [...new Set(data.map(row => row[0]))].sort();
+      fullNazioneList = [...new Set(data.map(row => row[nazioneIndex]))].sort();
 
       populateSelect("isinSelect", fullIsinList);
       populateSelect("nazioneSelect", fullNazioneList);
 
-      renderTable(tableData);
+      renderTable(data);
     }
 
     function populateSelect(id, values) {
@@ -125,6 +125,7 @@
     function filterTable() {
       const isinVal = document.getElementById("isinSelect").value;
       const nazVal = document.getElementById("nazioneSelect").value;
+      const nazioneIndex = document.querySelector("#btpTable thead tr").children.length - 1;
       let filtered = tableData;
       if (isinVal) filtered = filtered.filter(row => row[0] === isinVal);
       if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
@@ -135,7 +136,7 @@
       if (sortCol === index) {
         sortAsc = !sortAsc;
       } else {
-        document.querySelectorAll(".sort-icon").forEach(el => el.textContent = "");
+        if (sortCol >= 0) document.getElementById(`icon-${sortCol}`).textContent = "⇅";
         sortCol = index;
         sortAsc = true;
       }
