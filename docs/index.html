@@ -9,87 +9,70 @@
     :root {
       --bg-light: #f6f6f6;
       --bg-white: #ffffff;
-      --text-dark: #000000;
-      --text-light: #ffffff;
+      --border: #ccc;
       --primary: #007BFF;
       --danger: #dc3545;
+      --danger-hover: #c82333;
+      --text: #000000;
     }
+
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg-light: #1e1e1e;
-        --bg-white: #2a2a2a;
-        --text-dark: #ffffff;
-        --text-light: #000000;
+        --bg-light: #121212;
+        --bg-white: #1e1e1e;
+        --border: #333;
+        --primary: #66aaff;
+        --danger: #ff4c4c;
+        --danger-hover: #cc0000;
+        --text: #f0f0f0;
       }
     }
 
     body {
       font-family: Arial, sans-serif;
-      padding: 1em;
+      padding: 2em;
       background: var(--bg-light);
-      color: var(--text-dark);
+      color: var(--text);
     }
+
     h1 {
       text-align: center;
     }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-top: 1em;
+
+    .filter-wrapper {
       background: var(--bg-white);
-      overflow-x: auto;
-      display: block;
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: center;
-      white-space: nowrap;
-    }
-    th {
-      background-color: var(--primary);
-      color: white;
-      cursor: pointer;
-      position: relative;
-    }
-    th .sort-icon {
-      font-size: 0.7em;
-      margin-left: 5px;
-      visibility: visible;
-    }
-    input, select {
-      margin: 5px;
-      padding: 5px;
-      width: 100%;
-      max-width: 200px;
-      box-sizing: border-box;
-    }
-    .filters-wrapper {
-      background: var(--bg-white);
-      border: 1px solid #ccc;
       padding: 15px;
-      margin-bottom: 15px;
-      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
     }
-    .basic-filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-    .range-filters {
+
+    .filters {
       display: flex;
       flex-wrap: wrap;
       gap: 15px;
+      align-items: flex-end;
     }
-    .range-group {
-      flex: 1 1 200px;
-      min-width: 150px;
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 180px;
     }
+
+    .filter-group label {
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    input, select {
+      padding: 5px;
+    }
+
     .range-values {
       font-size: 0.85em;
       margin-bottom: 5px;
     }
+
     #resetButton {
       height: 40px;
       padding: 0 15px;
@@ -98,14 +81,43 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      margin-top: 10px;
     }
+
     #resetButton:hover {
-      background-color: #c82333;
+      background-color: var(--danger-hover);
     }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 1em;
+      background: var(--bg-white);
+    }
+
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      background-color: var(--primary);
+      color: white;
+      cursor: pointer;
+    }
+
+    th .sort-icon {
+      font-size: 0.7em;
+      margin-left: 5px;
+    }
+
     @media (max-width: 600px) {
-      th, td {
-        font-size: 0.85em;
+      .filters {
+        flex-direction: column;
+      }
+
+      .filter-group {
+        width: 100%;
       }
     }
   </style>
@@ -113,26 +125,28 @@
 <body>
   <h1>📈 Rendimenti Titoli di Stato</h1>
 
-  <div class="filters-wrapper">
-    <div class="basic-filters">
-      <div>
+  <div class="filter-wrapper">
+    <div class="filters">
+      <div class="filter-group">
         <label for="isinSearch">Cerca ISIN:</label>
         <input type="text" id="isinSearch" placeholder="Cerca ISIN" onkeyup="filterTable()">
       </div>
-      <div>
+
+      <div class="filter-group">
         <label for="nazioneSearch">Cerca Nazione:</label>
-        <input type="text" id="nazioneSearch" placeholder="Cerca Nazione" onkeyup="updateDropdown('nazioneSelect', this.value)">
-      </div>
-      <div>
-        <label for="nazioneSelect">Nazione:</label>
+        <input type="text" id="nazioneSearch" placeholder="Filtra opzioni" onkeyup="updateDropdown('nazioneSelect', this.value)">
         <select id="nazioneSelect" onchange="filterTable()">
           <option value="">Tutte</option>
         </select>
       </div>
-    </div>
 
-    <div class="range-filters" id="rangeFilters"></div>
-    <button id="resetButton" onclick="resetFilters()">Reset</button>
+      <div id="rangeFilters" class="filters" style="flex-wrap: wrap;"></div>
+
+      <div class="filter-group">
+        <label>&nbsp;</label>
+        <button id="resetButton" onclick="resetFilters()">Reset</button>
+      </div>
+    </div>
   </div>
 
   <table id="btpTable">
@@ -141,7 +155,151 @@
   </table>
 
   <script>
-    // Inserisci qui il tuo script JavaScript esistente per caricare e gestire i dati
+    let tableData = [];
+    let originalData = [];
+    let fullNazioneList = [];
+    let sortCol = -1;
+    let sortAsc = true;
+    let minMaxMap = {};
+
+    async function loadCSV() {
+      const response = await fetch("https://raw.githubusercontent.com/LindorMore/dati_titoli_stato/main/dati_btp.csv");
+      const text = await response.text();
+      const rows = text.trim().split("\n").map(row => row.split(","));
+      const [header, ...data] = rows;
+      tableData = data;
+      originalData = [...data];
+
+      const thead = document.querySelector("#btpTable thead");
+      thead.innerHTML = "<tr>" + header.map((col, i) => {
+        const isSortable = i !== 0 && i !== header.length - 1;
+        return `<th${isSortable ? ` onclick="sortTable(${i})"` : ''}>${col}${isSortable ? `<span class="sort-icon" id="icon-${i}">⇅</span>` : ''}</th>`;
+      }).join("") + "</tr>";
+
+      const nazioneIndex = header.length - 1;
+      fullNazioneList = [...new Set(data.map(row => row[nazioneIndex]))].sort();
+      populateSelect("nazioneSelect", fullNazioneList);
+
+      createRangeFilters(header);
+      renderTable(data);
+    }
+
+    function createRangeFilters(header) {
+      const container = document.getElementById("rangeFilters");
+      container.innerHTML = "";
+      const numericIndices = [1, 2, 3, 5, 6, 7];
+      numericIndices.forEach((i) => {
+        const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
+        const minVal = Math.floor(Math.min(...values));
+        const maxVal = Math.ceil(Math.max(...values));
+        minMaxMap[i] = { min: minVal, max: maxVal };
+        const div = document.createElement("div");
+        div.className = "filter-group";
+        div.innerHTML = `
+          <label>${header[i]}</label>
+          <div class="range-values">Min: <span id="val-min-${i}">${minVal}</span> - Max: <span id="val-max-${i}">${maxVal}</span></div>
+          <input type="range" id="min-${i}" min="${minVal}" max="${maxVal}" value="${minVal}" oninput="updateRange(${i})">
+          <input type="range" id="max-${i}" min="${minVal}" max="${maxVal}" value="${maxVal}" oninput="updateRange(${i})">
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function updateRange(i) {
+      const min = document.getElementById(`min-${i}`).value;
+      const max = document.getElementById(`max-${i}`).value;
+      document.getElementById(`val-min-${i}`).textContent = min;
+      document.getElementById(`val-max-${i}`).textContent = max;
+      filterTable();
+    }
+
+    function resetFilters() {
+      document.getElementById("isinSearch").value = "";
+      document.getElementById("nazioneSearch").value = "";
+      document.getElementById("nazioneSelect").value = "";
+      updateDropdown('nazioneSelect', '');
+
+      const numericIndices = [1, 2, 3, 5, 6, 7];
+      numericIndices.forEach(i => {
+        const { min, max } = minMaxMap[i];
+        document.getElementById(`min-${i}`).value = min;
+        document.getElementById(`max-${i}`).value = max;
+        document.getElementById(`val-min-${i}`).textContent = min;
+        document.getElementById(`val-max-${i}`).textContent = max;
+      });
+
+      tableData = [...originalData];
+      renderTable(tableData);
+    }
+
+    function populateSelect(id, values) {
+      const select = document.getElementById(id);
+      select.innerHTML = '<option value="">Tutte</option>';
+      values.forEach(val => {
+        const opt = document.createElement("option");
+        opt.value = val;
+        opt.textContent = val;
+        select.appendChild(opt);
+      });
+    }
+
+    function updateDropdown(id, searchValue) {
+      const list = fullNazioneList;
+      const filtered = list.filter(v => v.toLowerCase().includes(searchValue.toLowerCase()));
+      populateSelect(id, filtered);
+    }
+
+    function renderTable(data) {
+      const tbody = document.querySelector("#btpTable tbody");
+      tbody.innerHTML = data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("");
+    }
+
+    function filterTable() {
+      const isinVal = document.getElementById("isinSearch").value.toLowerCase().trim();
+      const nazVal = document.getElementById("nazioneSelect").value;
+      const nazioneIndex = document.querySelector("#btpTable thead tr").children.length - 1;
+      let filtered = [...originalData];
+      if (isinVal) filtered = filtered.filter(row => row[0].toLowerCase().includes(isinVal));
+      if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
+
+      const numericIndices = [1, 2, 3, 5, 6, 7];
+      numericIndices.forEach(i => {
+        const min = parseFloat(document.getElementById(`min-${i}`).value);
+        const max = parseFloat(document.getElementById(`max-${i}`).value);
+        filtered = filtered.filter(row => {
+          const val = parseFloat(row[i]);
+          return !isNaN(val) && val >= min && val <= max;
+        });
+      });
+
+      renderTable(filtered);
+    }
+
+    function sortTable(index) {
+      if (index === 0 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
+
+      if (sortCol === index) {
+        sortAsc = !sortAsc;
+      } else {
+        if (sortCol >= 0) document.getElementById(`icon-${sortCol}`).textContent = "⇅";
+        sortCol = index;
+        sortAsc = true;
+      }
+      const icon = document.getElementById(`icon-${index}`);
+      icon.textContent = sortAsc ? "🔼" : "🔽";
+
+      originalData.sort((a, b) => {
+        const valA = isNaN(a[index]) ? a[index] : parseFloat(a[index]);
+        const valB = isNaN(b[index]) ? b[index] : parseFloat(b[index]);
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
+      });
+      filterTable();
+    }
+
+    loadCSV();
   </script>
 </body>
 </html>
+
