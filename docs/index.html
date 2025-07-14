@@ -14,18 +14,7 @@
       --danger: #dc3545;
       --danger-hover: #c82333;
       --text: #000000;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg-light: #121212;
-        --bg-white: #1e1e1e;
-        --border: #333;
-        --primary: #66aaff;
-        --danger: #ff4c4c;
-        --danger-hover: #cc0000;
-        --text: #f0f0f0;
-      }
+      --header-bg: #e0e0e0;
     }
 
     body {
@@ -44,13 +33,15 @@
       padding: 15px;
       border: 1px solid var(--border);
       margin-bottom: 20px;
+      overflow-x: auto;
     }
 
     .filters {
       display: flex;
-      flex-wrap: wrap;
-      gap: 15px;
+      gap: 20px;
       align-items: flex-end;
+      flex-wrap: wrap;
+      min-width: 600px;
     }
 
     .filter-group {
@@ -101,8 +92,8 @@
     }
 
     th {
-      background-color: var(--primary);
-      color: white;
+      background-color: var(--header-bg);
+      color: black;
       cursor: pointer;
     }
 
@@ -111,13 +102,19 @@
       margin-left: 5px;
     }
 
-    @media (max-width: 600px) {
+    @media (max-width: 768px) {
+      .filter-wrapper {
+        overflow-x: auto;
+      }
+
       .filters {
-        flex-direction: column;
+        flex-wrap: nowrap;
+        min-width: max-content;
       }
 
       .filter-group {
-        width: 100%;
+        min-width: 160px;
+        flex-shrink: 0;
       }
     }
   </style>
@@ -140,7 +137,7 @@
         </select>
       </div>
 
-      <div id="rangeFilters" class="filters" style="flex-wrap: wrap;"></div>
+      <div id="rangeFilters" class="filters" style="gap: 15px; flex-wrap: wrap;"></div>
 
       <div class="filter-group">
         <label>&nbsp;</label>
@@ -302,4 +299,3 @@
   </script>
 </body>
 </html>
-
