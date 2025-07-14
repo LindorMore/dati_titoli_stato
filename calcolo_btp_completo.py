@@ -85,7 +85,7 @@ def calcoli(isin, prezzo, cedola_semestrale, scadenza_data, nazione):
     ]
 
 # === ESTRAZIONE E CALCOLO ===
-dati_finali = [["ISIN", "Prezzo", "Cedola Semestrale", "Cedola Annua %", "Scadenza", "Mesi Scadenza", "Rend. Totale %", "Rend. Annuo %", "Nazione"]]
+dati_finali = [["ISIN", "Prezzo", "Cedola Semestrale Lorda", "Cedola Annua Lorda %", "Data di Scadenza", "Mesi alla Scadenza", "Rendimento Totale Lordo %", "Rendimento lordo Annuo %", "Nazione"]]
 
 for isin in ISIN_LIST:
     print(f"🔎 Elaborazione {isin}...")
