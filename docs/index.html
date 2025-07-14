@@ -45,6 +45,15 @@
       padding: 10px;
       border: 1px solid #ccc;
     }
+    .range-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 10px;
+    }
+    .range-filters label {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -60,6 +69,8 @@
       <option value="">Tutte</option>
     </select>
   </div>
+
+  <div class="range-filters" id="rangeFilters"></div>
 
   <table id="btpTable">
     <thead></thead>
@@ -89,7 +100,22 @@
       fullNazioneList = [...new Set(data.map(row => row[nazioneIndex]))].sort();
       populateSelect("nazioneSelect", fullNazioneList);
 
+      createRangeFilters(header);
       renderTable(data);
+    }
+
+    function createRangeFilters(header) {
+      const container = document.getElementById("rangeFilters");
+      container.innerHTML = "";
+      for (let i = 1; i <= 7; i++) {
+        const div = document.createElement("div");
+        div.innerHTML = `
+          <label>${header[i]}</label>
+          <input type="range" id="min-${i}" min="0" max="100" value="0" oninput="filterTable()">
+          <input type="range" id="max-${i}" min="0" max="100" value="100" oninput="filterTable()">
+        `;
+        container.appendChild(div);
+      }
     }
 
     function populateSelect(id, values) {
@@ -121,6 +147,16 @@
       let filtered = tableData;
       if (isinVal) filtered = filtered.filter(row => row[0].toLowerCase().includes(isinVal));
       if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
+
+      for (let i = 1; i <= 7; i++) {
+        const min = parseFloat(document.getElementById(`min-${i}`).value);
+        const max = parseFloat(document.getElementById(`max-${i}`).value);
+        filtered = filtered.filter(row => {
+          const val = parseFloat(row[i]);
+          return !isNaN(val) && val >= min && val <= max;
+        });
+      }
+
       renderTable(filtered);
     }
 
