@@ -34,6 +34,7 @@
     th .sort-icon {
       font-size: 0.7em;
       margin-left: 5px;
+      visibility: visible;
     }
     input, select {
       margin: 5px;
@@ -96,7 +97,7 @@
 
   <div class="range-filters" id="rangeFilters"></div>
   <div style="text-align: right; padding: 0 10px;">
-    <button id="resetButton" onclick="resetRanges()">Reset</button>
+    <button id="resetButton" onclick="resetFilters()">Reset</button>
   </div>
 
   <table id="btpTable">
@@ -106,6 +107,7 @@
 
   <script>
     let tableData = [];
+    let originalData = [];
     let fullNazioneList = [];
     let sortCol = -1;
     let sortAsc = true;
@@ -116,6 +118,7 @@
       const rows = text.trim().split("\n").map(row => row.split(","));
       const [header, ...data] = rows;
       tableData = data;
+      originalData = [...data];
 
       const thead = document.querySelector("#btpTable thead");
       thead.innerHTML = "<tr>" + header.map((col, i) => {
@@ -155,12 +158,18 @@
       filterTable();
     }
 
-    function resetRanges() {
+    function resetFilters() {
+      document.getElementById("isinSearch").value = "";
+      document.getElementById("nazioneSearch").value = "";
+      document.getElementById("nazioneSelect").value = "";
+      updateDropdown('nazioneSelect', '');
       for (let i = 1; i <= 7; i++) {
         document.getElementById(`min-${i}`).value = 0;
         document.getElementById(`max-${i}`).value = 100;
-        updateRange(i);
+        document.getElementById(`val-min-${i}`).textContent = "0";
+        document.getElementById(`val-max-${i}`).textContent = "100";
       }
+      filterTable();
     }
 
     function populateSelect(id, values) {
@@ -189,7 +198,7 @@
       const isinVal = document.getElementById("isinSearch").value.toLowerCase();
       const nazVal = document.getElementById("nazioneSelect").value;
       const nazioneIndex = document.querySelector("#btpTable thead tr").children.length - 1;
-      let filtered = tableData;
+      let filtered = [...originalData];
       if (isinVal) filtered = filtered.filter(row => row[0].toLowerCase().includes(isinVal));
       if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
 
@@ -218,7 +227,7 @@
       const icon = document.getElementById(`icon-${index}`);
       icon.textContent = sortAsc ? "🔼" : "🔽";
 
-      tableData.sort((a, b) => {
+      originalData.sort((a, b) => {
         const valA = isNaN(a[index]) ? a[index] : parseFloat(a[index]);
         const valB = isNaN(b[index]) ? b[index] : parseFloat(b[index]);
         if (valA < valB) return sortAsc ? -1 : 1;
