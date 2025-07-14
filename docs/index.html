@@ -6,86 +6,102 @@
   <meta name="robots" content="noindex, nofollow" />
   <title>Rendimenti Titoli di Stato</title>
   <style>
-    :root {
-      --bg-light: #f6f6f6;
-      --bg-white: #ffffff;
-      --border: #ccc;
-      --primary: #007BFF;
-      --danger: #dc3545;
-      --danger-hover: #c82333;
-      --text: #000000;
-      --header-bg: #e0e0e0;
-    }
-
     body {
       font-family: Arial, sans-serif;
-      padding: 2em;
-      background: var(--bg-light);
-      color: var(--text);
+      padding: 1em;
+      background: #f6f6f6;
     }
-
     h1 {
       text-align: center;
+      margin-bottom: 0.5em;
     }
-
-    .mobile-notice {
-      display: none;
-      text-align: center;
+    .lang-icons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
       margin-bottom: 10px;
-      font-size: 0.95em;
-      font-weight: bold;
-      color: #333;
     }
-
-    @media (max-width: 768px) {
-      .mobile-notice {
-        display: block;
-      }
+    .lang-icons img {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
     }
 
     .filter-wrapper {
-      background: var(--bg-white);
-      padding: 15px;
-      border: 1px solid var(--border);
-      margin-bottom: 20px;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
       overflow-x: auto;
+    }
+
+    .mobile-hint {
+      display: none;
+      text-align: center;
+      font-size: 0.9em;
+      margin-bottom: 5px;
+      color: #555;
+    }
+
+    @media (max-width: 768px) {
+      .mobile-hint {
+        display: block;
+      }
+      .filter-wrapper {
+        display: block;
+        white-space: nowrap;
+      }
+      .filter-group {
+        display: inline-block;
+        vertical-align: top;
+        margin-right: 10px;
+      }
     }
 
     .filters {
       display: flex;
-      gap: 20px;
-      align-items: flex-end;
       flex-wrap: wrap;
-      min-width: 600px;
+      gap: 15px;
+      align-items: flex-end;
     }
 
-    .filter-group {
-      display: flex;
-      flex-direction: column;
-      min-width: 180px;
-    }
-
-    .nazione-group {
-      display: flex;
-      flex-direction: column;
-      min-width: 180px;
-    }
-
-    .nazione-group input {
-      margin-bottom: 5px;
-    }
-
-    .nazione-group select {
-      align-self: flex-end;
-    }
-
-    .filter-group label {
-      margin-bottom: 5px;
+    .filters label {
+      display: block;
+      margin-bottom: 4px;
       font-weight: bold;
     }
 
     input, select {
-      padding: 5px;
+      padding: 4px;
+      font-size: 0.95em;
+    }
+
+    #resetButton {
+      height: 40px;
+      padding: 0 15px;
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: auto;
+    }
+
+    #resetButton:hover {
+      background-color: #c82333;
+    }
+
+    .range-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    .range-group {
+      background: #fff;
+      padding: 8px;
+      border: 1px solid #ccc;
     }
 
     .range-values {
@@ -93,47 +109,31 @@
       margin-bottom: 5px;
     }
 
-    #resetButton {
-      height: 40px;
-      padding: 0 15px;
-      background-color: var(--danger);
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    #resetButton:hover {
-      background-color: var(--danger-hover);
-    }
-
-    #resultCount {
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-
-    .table-wrapper {
+    .table-container {
       overflow-x: auto;
+      background: #fff;
+      border: 1px solid #ccc;
+      margin-top: 10px;
     }
 
     table {
       border-collapse: collapse;
       width: 100%;
-      margin-top: 1em;
-      background: var(--bg-white);
+      background: white;
       min-width: 800px;
     }
 
     th, td {
-      border: 1px solid var(--border);
+      border: 1px solid #ddd;
       padding: 8px;
       text-align: center;
     }
 
     th {
-      background-color: var(--header-bg);
+      background-color: #e0e0e0;
       color: black;
       cursor: pointer;
+      position: relative;
     }
 
     th .sort-icon {
@@ -141,27 +141,25 @@
       margin-left: 5px;
     }
 
-    @media (max-width: 768px) {
-      .filter-wrapper {
-        overflow-x: auto;
-      }
-
-      .filters {
-        flex-wrap: nowrap;
-        min-width: max-content;
-      }
-
-      .filter-group {
-        min-width: 160px;
-        flex-shrink: 0;
-      }
+    #rowCount {
+      text-align: right;
+      margin-bottom: 5px;
+      font-size: 0.9em;
     }
   </style>
 </head>
 <body>
-  <h1>📈 Rendimenti Titoli di Stato</h1>
+  <h1>Rendimenti Titoli di Stato</h1>
 
-  <div class="mobile-notice">📱 Scorri per visualizzare i filtri</div>
+  <div class="lang-icons">
+    <img src="https://flagcdn.com/it.svg" alt="IT" title="Italiano">
+    <img src="https://flagcdn.com/gb.svg" alt="EN" title="English">
+    <img src="https://flagcdn.com/fr.svg" alt="FR" title="Français">
+    <img src="https://flagcdn.com/de.svg" alt="DE" title="Deutsch">
+    <img src="https://flagcdn.com/es.svg" alt="ES" title="Español">
+  </div>
+
+  <div class="mobile-hint">Scorri per visualizzare i filtri</div>
 
   <div class="filter-wrapper">
     <div class="filters">
@@ -170,26 +168,24 @@
         <input type="text" id="isinSearch" placeholder="Cerca ISIN" onkeyup="filterTable()">
       </div>
 
-      <div class="nazione-group">
-        <label for="nazioneSearch">Cerca Nazione:</label>
-        <input type="text" id="nazioneSearch" placeholder="Filtra opzioni" onkeyup="updateDropdown('nazioneSelect', this.value)">
-        <select id="nazioneSelect" onchange="filterTable()">
-          <option value="">Tutte</option>
-        </select>
-      </div>
-
-      <div id="rangeFilters" class="filters" style="gap: 15px; flex-wrap: wrap;"></div>
-
       <div class="filter-group">
-        <label>&nbsp;</label>
-        <button id="resetButton" onclick="resetFilters()">Reset</button>
+        <label for="nazioneSearch"><strong>Cerca Nazione:</strong></label>
+        <div style="display: flex; gap: 5px;">
+          <input type="text" id="nazioneSearch" placeholder="Scrivi..." onkeyup="updateDropdown('nazioneSelect', this.value)">
+          <select id="nazioneSelect" onchange="filterTable()">
+            <option value="">Tutte</option>
+          </select>
+        </div>
       </div>
+
+      <button id="resetButton" onclick="resetFilters()">Reset</button>
     </div>
+
+    <div class="range-filters" id="rangeFilters"></div>
   </div>
 
-  <div id="resultCount"></div>
-
-  <div class="table-wrapper">
+  <div id="rowCount">0 risultati mostrati</div>
+  <div class="table-container">
     <table id="btpTable">
       <thead></thead>
       <tbody></tbody>
@@ -215,7 +211,7 @@
       const thead = document.querySelector("#btpTable thead");
       thead.innerHTML = "<tr>" + header.map((col, i) => {
         const isSortable = i !== 0 && i !== header.length - 1;
-        return `<th${isSortable ? ` onclick="sortTable(${i})"` : ''}>${col}${isSortable ? `<span class="sort-icon" id="icon-${i}">⇅</span>` : ''}</th>`;
+        return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
       }).join("") + "</tr>";
 
       const nazioneIndex = header.length - 1;
@@ -236,7 +232,7 @@
         const maxVal = Math.ceil(Math.max(...values));
         minMaxMap[i] = { min: minVal, max: maxVal };
         const div = document.createElement("div");
-        div.className = "filter-group";
+        div.className = "range-group";
         div.innerHTML = `
           <label>${header[i]}</label>
           <div class="range-values">Min: <span id="val-min-${i}">${minVal}</span> - Max: <span id="val-max-${i}">${maxVal}</span></div>
@@ -286,15 +282,14 @@
     }
 
     function updateDropdown(id, searchValue) {
-      const list = fullNazioneList;
-      const filtered = list.filter(v => v.toLowerCase().includes(searchValue.toLowerCase()));
+      const filtered = fullNazioneList.filter(v => v.toLowerCase().includes(searchValue.toLowerCase()));
       populateSelect(id, filtered);
     }
 
     function renderTable(data) {
       const tbody = document.querySelector("#btpTable tbody");
       tbody.innerHTML = data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("");
-      document.getElementById("resultCount").textContent = `Titoli visualizzati: ${data.length}`;
+      document.getElementById("rowCount").textContent = `${data.length} risultati mostrati`;
     }
 
     function filterTable() {
@@ -328,16 +323,14 @@
         sortCol = index;
         sortAsc = true;
       }
-      const icon = document.getElementById(`icon-${index}`);
-      icon.textContent = sortAsc ? "🔼" : "🔽";
+      document.getElementById(`icon-${index}`).textContent = sortAsc ? "🔼" : "🔽";
 
       originalData.sort((a, b) => {
         const valA = isNaN(a[index]) ? a[index] : parseFloat(a[index]);
         const valB = isNaN(b[index]) ? b[index] : parseFloat(b[index]);
-        if (valA < valB) return sortAsc ? -1 : 1;
-        if (valA > valB) return sortAsc ? 1 : -1;
-        return 0;
+        return sortAsc ? valA - valB : valB - valA;
       });
+
       filterTable();
     }
 
