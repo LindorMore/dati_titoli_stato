@@ -138,7 +138,7 @@
     function createRangeFilters(header) {
       const container = document.getElementById("rangeFilters");
       container.innerHTML = "";
-      const numericIndices = [1, 2, 3, 4, 6, 7];
+      const numericIndices = [1, 2, 3, 5, 6, 7]; // sostituito 4 con 5
       numericIndices.forEach((i) => {
         const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
         const minVal = Math.floor(Math.min(...values));
@@ -170,7 +170,7 @@
       document.getElementById("nazioneSelect").value = "";
       updateDropdown('nazioneSelect', '');
 
-      const numericIndices = [1, 2, 3, 4, 6, 7];
+      const numericIndices = [1, 2, 3, 5, 6, 7];
       numericIndices.forEach(i => {
         const { min, max } = minMaxMap[i];
         document.getElementById(`min-${i}`).value = min;
@@ -213,7 +213,7 @@
       if (isinVal) filtered = filtered.filter(row => row[0].toLowerCase().includes(isinVal));
       if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
 
-      const numericIndices = [1, 2, 3, 4, 6, 7];
+      const numericIndices = [1, 2, 3, 5, 6, 7];
       numericIndices.forEach(i => {
         const min = parseFloat(document.getElementById(`min-${i}`).value);
         const max = parseFloat(document.getElementById(`max-${i}`).value);
