@@ -40,20 +40,17 @@
       margin: 5px;
       padding: 5px;
     }
-    .filter-wrapper {
-      background: #fff;
-      padding: 15px;
-      border: 1px solid #ccc;
-      margin-bottom: 20px;
-    }
     .filter-container {
       margin-bottom: 10px;
+      background: #fff;
+      padding: 10px;
+      border: 1px solid #ccc;
     }
     .range-filters {
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
-      padding: 10px 0;
+      padding: 10px;
       align-items: flex-end;
     }
     .range-filters label {
@@ -78,8 +75,6 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      float: right;
-      margin-top: 10px;
     }
     #resetButton:hover {
       background-color: #c82333;
@@ -89,22 +84,20 @@
 <body>
   <h1>📈 Rendimenti Titoli di Stato</h1>
 
-  <div class="filter-wrapper">
-    <div class="filter-container">
-      <label for="isinSearch">Cerca ISIN:</label>
-      <input type="text" id="isinSearch" placeholder="Cerca ISIN" onkeyup="filterTable()">
+  <div class="filter-container">
+    <label for="isinSearch">Cerca ISIN:</label>
+    <input type="text" id="isinSearch" placeholder="Cerca ISIN" onkeyup="filterTable()">
 
-      <label for="nazioneSearch">Nazione:</label>
-      <input type="text" id="nazioneSearch" placeholder="Cerca Nazione" onkeyup="updateDropdown('nazioneSelect', this.value)">
-      <select id="nazioneSelect" onchange="filterTable()">
-        <option value="">Tutte</option>
-      </select>
-    </div>
+    <label for="nazioneSelect">Nazione:</label>
+    <input type="text" id="nazioneSearch" placeholder="Cerca Nazione" onkeyup="updateDropdown('nazioneSelect', this.value)">
+    <select id="nazioneSelect" onchange="filterTable()">
+      <option value="">Tutte</option>
+    </select>
+  </div>
 
-    <div class="range-filters" id="rangeFilters"></div>
-
+  <div class="range-filters" id="rangeFilters"></div>
+  <div style="text-align: right; padding: 0 10px;">
     <button id="resetButton" onclick="resetFilters()">Reset</button>
-    <div style="clear: both;"></div>
   </div>
 
   <table id="btpTable">
@@ -113,11 +106,150 @@
   </table>
 
   <script>
-    // Tutto il codice JS resta invariato
-    // ...
-    // (lascio intatto tutto lo script perché già funziona perfettamente)
-    // ...
-    // inserisci qui lo stesso script originale
+    let tableData = [];
+    let originalData = [];
+    let fullNazioneList = [];
+    let sortCol = -1;
+    let sortAsc = true;
+    let minMaxMap = {};
+
+    async function loadCSV() {
+      const response = await fetch("https://raw.githubusercontent.com/LindorMore/dati_titoli_stato/main/dati_btp.csv");
+      const text = await response.text();
+      const rows = text.trim().split("\n").map(row => row.split(","));
+      const [header, ...data] = rows;
+      tableData = data;
+      originalData = [...data];
+
+      const thead = document.querySelector("#btpTable thead");
+      thead.innerHTML = "<tr>" + header.map((col, i) => {
+        const isSortable = i !== 0 && i !== header.length - 1;
+        return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
+      }).join("") + "</tr>";
+
+      const nazioneIndex = header.length - 1;
+      fullNazioneList = [...new Set(data.map(row => row[nazioneIndex]))].sort();
+      populateSelect("nazioneSelect", fullNazioneList);
+
+      createRangeFilters(header);
+      renderTable(data);
+    }
+
+    function createRangeFilters(header) {
+      const container = document.getElementById("rangeFilters");
+      container.innerHTML = "";
+      const numericIndices = [1, 2, 3, 5, 6, 7];
+      numericIndices.forEach((i) => {
+        const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
+        const minVal = Math.floor(Math.min(...values));
+        const maxVal = Math.ceil(Math.max(...values));
+        minMaxMap[i] = { min: minVal, max: maxVal };
+        const div = document.createElement("div");
+        div.className = "range-group";
+        div.innerHTML = `
+          <label>${header[i]}</label>
+          <div class="range-values">Minimo: <span id="val-min-${i}">${minVal}</span> - Massimo: <span id="val-max-${i}">${maxVal}</span></div>
+          <input type="range" id="min-${i}" min="${minVal}" max="${maxVal}" value="${minVal}" oninput="updateRange(${i})">
+          <input type="range" id="max-${i}" min="${minVal}" max="${maxVal}" value="${maxVal}" oninput="updateRange(${i})">
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function updateRange(i) {
+      const min = document.getElementById(`min-${i}`).value;
+      const max = document.getElementById(`max-${i}`).value;
+      document.getElementById(`val-min-${i}`).textContent = min;
+      document.getElementById(`val-max-${i}`).textContent = max;
+      filterTable();
+    }
+
+    function resetFilters() {
+      document.getElementById("isinSearch").value = "";
+      document.getElementById("nazioneSearch").value = "";
+      document.getElementById("nazioneSelect").value = "";
+      updateDropdown('nazioneSelect', '');
+
+      const numericIndices = [1, 2, 3, 5, 6, 7];
+      numericIndices.forEach(i => {
+        const { min, max } = minMaxMap[i];
+        document.getElementById(`min-${i}`).value = min;
+        document.getElementById(`max-${i}`).value = max;
+        document.getElementById(`val-min-${i}`).textContent = min;
+        document.getElementById(`val-max-${i}`).textContent = max;
+      });
+
+      tableData = [...originalData];
+      renderTable(tableData);
+    }
+
+    function populateSelect(id, values) {
+      const select = document.getElementById(id);
+      select.innerHTML = '<option value="">Tutte</option>';
+      values.forEach(val => {
+        const opt = document.createElement("option");
+        opt.value = val;
+        opt.textContent = val;
+        select.appendChild(opt);
+      });
+    }
+
+    function updateDropdown(id, searchValue) {
+      const list = fullNazioneList;
+      const filtered = list.filter(v => v.toLowerCase().includes(searchValue.toLowerCase()));
+      populateSelect(id, filtered);
+    }
+
+    function renderTable(data) {
+      const tbody = document.querySelector("#btpTable tbody");
+      tbody.innerHTML = data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("");
+    }
+
+    function filterTable() {
+      const isinVal = document.getElementById("isinSearch").value.toLowerCase().trim();
+      const nazVal = document.getElementById("nazioneSelect").value;
+      const nazioneIndex = document.querySelector("#btpTable thead tr").children.length - 1;
+      let filtered = [...originalData];
+      if (isinVal) filtered = filtered.filter(row => row[0].toLowerCase().trim().includes(isinVal));
+      if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
+
+      const numericIndices = [1, 2, 3, 5, 6, 7];
+      numericIndices.forEach(i => {
+        const min = parseFloat(document.getElementById(`min-${i}`).value);
+        const max = parseFloat(document.getElementById(`max-${i}`).value);
+        filtered = filtered.filter(row => {
+          const val = parseFloat(row[i]);
+          return !isNaN(val) && val >= min && val <= max;
+        });
+      });
+
+      renderTable(filtered);
+    }
+
+    function sortTable(index) {
+      if (index === 0 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
+
+      if (sortCol === index) {
+        sortAsc = !sortAsc;
+      } else {
+        if (sortCol >= 0) document.getElementById(`icon-${sortCol}`).textContent = "⇅";
+        sortCol = index;
+        sortAsc = true;
+      }
+      const icon = document.getElementById(`icon-${index}`);
+      icon.textContent = sortAsc ? "🔼" : "🔽";
+
+      originalData.sort((a, b) => {
+        const valA = isNaN(a[index]) ? a[index] : parseFloat(a[index]);
+        const valB = isNaN(b[index]) ? b[index] : parseFloat(b[index]);
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
+      });
+      filterTable();
+    }
+
+    loadCSV();
   </script>
 </body>
 </html>
