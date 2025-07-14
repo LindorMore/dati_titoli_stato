@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Renditen von Staatsanleihen</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 1em;
+      background: #f6f6f6;
+      margin: 0;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 0.5em;
+    }
+
+    .language-selector {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      text-align: right;
+    }
+    .language-selector span {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .language-selector a img {
+      width: 24px;
+      height: 16px;
+      margin-left: 5px;
+      object-fit: cover;
+      vertical-align: middle;
+    }
+
+    .filter-section-wrapper {
+      overflow-x: auto;
+      margin-bottom: 1em;
+    }
+
+    .filter-info-mobile {
+      display: none;
+      font-size: 0.9em;
+      margin-bottom: 5px;
+      font-style: italic;
+      color: #333;
+    }
+
+    .filter-container {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      position: relative;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .inline-group {
+      display: flex;
+      align-items: center;
+    }
+
+    .inline-group label {
+      font-weight: bold;
+      margin-right: 5px;
+    }
+
+    select, input[type="text"], input[type="range"] {
+      padding: 5px;
+      margin-top: 3px;
+    }
+
+    .range-group {
+      border: 1px solid #ccc;
+      padding: 5px;
+      background: #fff;
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .range-values {
+      font-size: 0.8em;
+      margin-bottom: 5px;
+    }
+
+    #resetButton {
+      height: 40px;
+      padding: 0 15px;
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    #resetButton:hover {
+      background-color: #c82333;
+    }
+
+    .range-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .result-count {
+      font-size: 1em;
+      margin: 10px 0;
+    }
+
+    .reset-wrapper-top {
+      text-align: right;
+      margin-top: 10px;
+      margin-bottom: -10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: white;
+      overflow-x: auto;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #e0e0e0;
+      font-weight: bold;
+      cursor: pointer;
+      position: relative;
+    }
+
+    th .sort-icon {
+      font-size: 0.7em;
+      margin-left: 5px;
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    @media (max-width: 768px) {
+      .filter-info-mobile {
+        display: block;
+      }
+
+      .filter-container {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+      }
+
+      .reset-wrapper-top {
+        text-align: center;
+        margin-bottom: 0;
+      }
+
+      .language-selector {
+        position: static;
+        text-align: center;
+        margin-top: 10px;
+        margin-bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Renditen von Staatsanleihen</h1>
+
+  <div class="language-selector">
+    <span>Sprache</span>
+    <a href="index_en.html"><img src="https://flagcdn.com/w20/gb.png" alt="Englisch" title="Englisch"></a>
+    <a href="index_fr.html"><img src="https://flagcdn.com/w20/fr.png" alt="Französisch" title="Französisch"></a>
+    <a href="index_de.html"><img src="https://flagcdn.com/w20/de.png" alt="Deutsch" title="Deutsch"></a>
+    <a href="index_es.html"><img src="https://flagcdn.com/w20/es.png" alt="Spanisch" title="Spanisch"></a>
+    <a href="index_it.html"><img src="https://flagcdn.com/w20/it.png" alt="Italienisch" title="Italienisch"></a>
+  </div>
+
+  <div class="filter-info-mobile">Zum Anzeigen der Filter nach rechts scrollen</div>
+  <div class="filter-section-wrapper">
+    <div class="filter-container" id="filterContainer">
+      <div class="filter-group">
+        <div class="inline-group">
+          <label for="isinSearch"><strong>ISIN suchen:</strong></label>
+          <input type="text" id="isinSearch" placeholder="ISIN suchen" onkeyup="filterTable()">
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="inline-group">
+          <label for="nazioneSearch"><strong>Land suchen:</strong></label>
+          <input type="text" id="nazioneSearch" placeholder="Land" onkeyup="updateDropdown('nazioneSelect', this.value)">
+          <select id="nazioneSelect" onchange="filterTable()">
+            <option value="">Alle</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="range-filters" id="rangeFilters"></div>
+    </div>
+  </div>
+
+  <div class="reset-wrapper-top">
+    <button id="resetButton" onclick="resetFilters()">Zurücksetzen</button>
+  </div>
+
+  <div class="result-count" id="resultCount">Angezeigte Ergebnisse: 0</div>
+
+  <div class="table-container">
+    <table id="btpTable">
+      <thead>
+        <tr>
+          <th onclick="sortTable(0)">ISIN</th>
+          <th onclick="sortTable(1)">Land</th>
+          <th onclick="sortTable(2)">Kurs</th>
+          <th onclick="sortTable(3)">Kupon (%)</th>
+          <th onclick="sortTable(4)">Fälligkeitsdatum</th>
+          <th onclick="sortTable(5)">Bruttorendite (%)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Die Daten werden hier dynamisch eingefügt -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    const data = [
+      { isin: 'IT0005433195', nazione: 'Italien', prezzo: 101.52, cedola: 0.1, scadenza: '01/12/2025', rendimento: 3.45 },
+      { isin: 'FR0014001NN8', nazione: 'Frankreich', prezzo: 98.34, cedola: 0.0, scadenza: '25/07/2026', rendimento: 2.85 },
+      { isin: 'DE0001102564', nazione: 'Deutschland', prezzo: 99.12, cedola: 0.2, scadenza: '15/08/2027', rendimento: 2.22 },
+      { isin: 'ES0000012B43', nazione: 'Spanien', prezzo: 97.75, cedola: 0.4, scadenza: '30/10/2028', rendimento: 3.12 },
+    ];
+
+    function populateTable() {
+      const tbody = document.querySelector('#btpTable tbody');
+      tbody.innerHTML = '';
+      data.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${row.isin}</td>
+          <td>${row.nazione}</td>
+          <td>${row.prezzo.toFixed(2)}</td>
+          <td>${row.cedola.toFixed(2)}</td>
+          <td>${row.scadenza}</td>
+          <td>${row.rendimento.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      filterTable();
+    }
+
+    function filterTable() {
+      const isinFilter = document.getElementById('isinSearch').value.toUpperCase();
+      const nazioneFilter = document.getElementById('nazioneSelect').value;
+      const tbody = document.querySelector('#btpTable tbody');
+      let count = 0;
+
+      Array.from(tbody.rows).forEach(row => {
+        const isin = row.cells[0].textContent.toUpperCase();
+        const nazione = row.cells[1].textContent;
+
+        const matchIsin = isin.includes(isinFilter);
+        const matchNazione = !nazioneFilter || nazione === nazioneFilter;
+
+        if (matchIsin && matchNazione) {
+          row.style.display = '';
+          count++;
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      document.getElementById('resultCount').textContent = `Angezeigte Ergebnisse: ${count}`;
+    }
+
+    function updateDropdown(selectId, searchValue) {
+      const select = document.getElementById(selectId);
+      const uniqueNations = [...new Set(data.map(item => item.nazione))];
+      const filtered = uniqueNations.filter(nazione => nazione.toLowerCase().includes(searchValue.toLowerCase()));
+      select.innerHTML = `<option value="">Alle</option>` + filtered.map(n => `<option value="${n}">${n}</option>`).join('');
+    }
+
+    function resetFilters() {
+      document.getElementById('isinSearch').value = '';
+      document.getElementById('nazioneSearch').value = '';
+      updateDropdown('nazioneSelect', '');
+      document.getElementById('nazioneSelect').value = '';
+      filterTable();
+    }
+
+    function sortTable(columnIndex) {
+      const table = document.getElementById("btpTable");
+      const rows = Array.from(table.rows).slice(1);
+      const isNumeric = !isNaN(rows[0].cells[columnIndex].textContent);
+      const sortedRows = rows.sort((a, b) => {
+        const aText = a.cells[columnIndex].textContent.trim();
+        const bText = b.cells[columnIndex].textContent.trim();
+        return isNumeric ? parseFloat(aText) - parseFloat(bText) : aText.localeCompare(bText);
+      });
+      rows.forEach(row => row.remove());
+      sortedRows.forEach(row => table.tBodies[0].appendChild(row));
+    }
+
+    window.onload = function() {
+      populateTable();
+      updateDropdown('nazioneSelect', '');
+    };
+  </script>
+</body>
+</html>
