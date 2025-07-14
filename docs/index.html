@@ -37,53 +37,21 @@
       padding: 10px;
       border: 1px solid #ccc;
     }
-    .filter-group {
-      display: inline-block;
-      margin-right: 10px;
-    }
-    .hidden {
-      display: none;
-    }
   </style>
 </head>
 <body>
   <h1>📈 Rendimenti Titoli di Stato</h1>
 
   <div class="filter-container">
-    <div class="filter-group">
-      <label>ISIN:</label>
-      <input type="text" id="isinFilter" onkeyup="filterTable()" placeholder="🔍 Cerca ISIN">
-    </div>
-    <div class="filter-group">
-      <label>Nazione:</label>
-      <input type="text" id="nazioneFilter" onkeyup="filterTable()" placeholder="🔍 Cerca Nazione">
-    </div>
+    <label for="isinSelect">ISIN:</label>
+    <select id="isinSelect" onchange="filterTable()">
+      <option value="">Tutti</option>
+    </select>
 
-    <!-- Filtri numerici -->
-    <div class="filter-group">
-      <label>Prezzo Min:</label><input type="number" id="minPrezzo" oninput="filterTable()">
-      <label>Max:</label><input type="number" id="maxPrezzo" oninput="filterTable()">
-    </div>
-    <div class="filter-group">
-      <label>Cedola % Min:</label><input type="number" id="minCedola" oninput="filterTable()">
-      <label>Max:</label><input type="number" id="maxCedola" oninput="filterTable()">
-    </div>
-    <div class="filter-group">
-      <label>Ced. Annua % Min:</label><input type="number" id="minCedAnnua" oninput="filterTable()">
-      <label>Max:</label><input type="number" id="maxCedAnnua" oninput="filterTable()">
-    </div>
-    <div class="filter-group">
-      <label>Mesi Scadenza Min:</label><input type="number" id="minMesi" oninput="filterTable()">
-      <label>Max:</label><input type="number" id="maxMesi" oninput="filterTable()">
-    </div>
-    <div class="filter-group">
-      <label>Rend. Totale % Min:</label><input type="number" id="minRendTot" oninput="filterTable()">
-      <label>Max:</label><input type="number" id="maxRendTot" oninput="filterTable()">
-    </div>
-    <div class="filter-group">
-      <label>Rend. Annuo % Min:</label><input type="number" id="minRendAnnuo" oninput="filterTable()">
-      <label>Max:</label><input type="number" id="maxRendAnnuo" oninput="filterTable()">
-    </div>
+    <label for="nazioneSelect">Nazione:</label>
+    <select id="nazioneSelect" onchange="filterTable()">
+      <option value="">Tutte</option>
+    </select>
   </div>
 
   <table id="btpTable">
@@ -93,6 +61,8 @@
 
   <script>
     let tableData = [];
+    let sortCol = -1;
+    let sortAsc = true;
 
     async function loadCSV() {
       const response = await fetch("https://raw.githubusercontent.com/LindorMore/dati_titoli_stato/main/dati_btp.csv");
@@ -102,10 +72,23 @@
       tableData = data;
 
       const thead = document.querySelector("#btpTable thead");
-      const tbody = document.querySelector("#btpTable tbody");
-
       thead.innerHTML = "<tr>" + header.map((col, i) => `<th onclick="sortTable(${i})">${col}</th>`).join("") + "</tr>";
+
+      populateSelect("isinSelect", data.map(row => row[0]));
+      populateSelect("nazioneSelect", data.map(row => row[1]));
+
       renderTable(data);
+    }
+
+    function populateSelect(id, values) {
+      const select = document.getElementById(id);
+      const uniqueValues = [...new Set(values)].sort();
+      uniqueValues.forEach(val => {
+        const opt = document.createElement("option");
+        opt.value = val;
+        opt.textContent = val;
+        select.appendChild(opt);
+      });
     }
 
     function renderTable(data) {
@@ -114,46 +97,28 @@
     }
 
     function filterTable() {
-      const isin = document.getElementById("isinFilter").value.toLowerCase();
-      const nazione = document.getElementById("nazioneFilter").value.toLowerCase();
-
-      const minPrezzo = parseFloat(document.getElementById("minPrezzo").value) || -Infinity;
-      const maxPrezzo = parseFloat(document.getElementById("maxPrezzo").value) || Infinity;
-      const minCedola = parseFloat(document.getElementById("minCedola").value) || -Infinity;
-      const maxCedola = parseFloat(document.getElementById("maxCedola").value) || Infinity;
-      const minCedAnnua = parseFloat(document.getElementById("minCedAnnua").value) || -Infinity;
-      const maxCedAnnua = parseFloat(document.getElementById("maxCedAnnua").value) || Infinity;
-      const minMesi = parseFloat(document.getElementById("minMesi").value) || -Infinity;
-      const maxMesi = parseFloat(document.getElementById("maxMesi").value) || Infinity;
-      const minRendTot = parseFloat(document.getElementById("minRendTot").value) || -Infinity;
-      const maxRendTot = parseFloat(document.getElementById("maxRendTot").value) || Infinity;
-      const minRendAnnuo = parseFloat(document.getElementById("minRendAnnuo").value) || -Infinity;
-      const maxRendAnnuo = parseFloat(document.getElementById("maxRendAnnuo").value) || Infinity;
-
-      const filtered = tableData.filter(row => {
-        return (
-          row[0].toLowerCase().includes(isin) &&
-          row[1].toLowerCase().includes(nazione) &&
-          parseFloat(row[2]) >= minPrezzo && parseFloat(row[2]) <= maxPrezzo &&
-          parseFloat(row[3]) >= minCedola && parseFloat(row[3]) <= maxCedola &&
-          parseFloat(row[4]) >= minCedAnnua && parseFloat(row[4]) <= maxCedAnnua &&
-          parseFloat(row[6]) >= minMesi && parseFloat(row[6]) <= maxMesi &&
-          parseFloat(row[7]) >= minRendTot && parseFloat(row[7]) <= maxRendTot &&
-          parseFloat(row[8]) >= minRendAnnuo && parseFloat(row[8]) <= maxRendAnnuo
-        );
-      });
-
+      const isinVal = document.getElementById("isinSelect").value;
+      const nazVal = document.getElementById("nazioneSelect").value;
+      let filtered = tableData;
+      if (isinVal) filtered = filtered.filter(row => row[0] === isinVal);
+      if (nazVal) filtered = filtered.filter(row => row[1] === nazVal);
       renderTable(filtered);
     }
 
-    let sortDirection = 1;
-    function sortTable(colIndex) {
+    function sortTable(index) {
+      if (sortCol === index) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = index;
+        sortAsc = true;
+      }
       tableData.sort((a, b) => {
-        const valA = isNaN(a[colIndex]) ? a[colIndex] : parseFloat(a[colIndex]);
-        const valB = isNaN(b[colIndex]) ? b[colIndex] : parseFloat(b[colIndex]);
-        return (valA > valB ? 1 : -1) * sortDirection;
+        const valA = isNaN(a[index]) ? a[index] : parseFloat(a[index]);
+        const valB = isNaN(b[index]) ? b[index] : parseFloat(b[index]);
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
       });
-      sortDirection *= -1;
       filterTable();
     }
 
