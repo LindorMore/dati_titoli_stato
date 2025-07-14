@@ -51,11 +51,8 @@
   <h1>📈 Rendimenti Titoli di Stato</h1>
 
   <div class="filter-container">
-    <label for="isinSelect">ISIN:</label>
-    <input type="text" id="isinSearch" placeholder="Cerca ISIN" onkeyup="updateDropdown('isinSelect', this.value)">
-    <select id="isinSelect" onchange="filterTable()">
-      <option value="">Tutti</option>
-    </select>
+    <label for="isinSearch">Cerca ISIN:</label>
+    <input type="text" id="isinSearch" placeholder="Cerca ISIN" onkeyup="filterTable()">
 
     <label for="nazioneSelect">Nazione:</label>
     <input type="text" id="nazioneSearch" placeholder="Cerca Nazione" onkeyup="updateDropdown('nazioneSelect', this.value)">
@@ -71,7 +68,6 @@
 
   <script>
     let tableData = [];
-    let fullIsinList = [];
     let fullNazioneList = [];
     let sortCol = -1;
     let sortAsc = true;
@@ -84,17 +80,13 @@
       tableData = data;
 
       const thead = document.querySelector("#btpTable thead");
-      thead.innerHTML = "<tr>" + header.map((col, i) => `
-        <th onclick="sortTable(${i})">
-          ${col}<span class="sort-icon" id="icon-${i}">⇅</span>
-        </th>
-      `).join("") + "</tr>";
+      thead.innerHTML = "<tr>" + header.map((col, i) => {
+        const isSortable = i !== 0 && i !== header.length - 1;
+        return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
+      }).join("") + "</tr>";
 
       const nazioneIndex = header.length - 1;
-      fullIsinList = [...new Set(data.map(row => row[0]))].sort();
       fullNazioneList = [...new Set(data.map(row => row[nazioneIndex]))].sort();
-
-      populateSelect("isinSelect", fullIsinList);
       populateSelect("nazioneSelect", fullNazioneList);
 
       renderTable(data);
@@ -102,7 +94,7 @@
 
     function populateSelect(id, values) {
       const select = document.getElementById(id);
-      select.innerHTML = '<option value="">Tutti</option>';
+      select.innerHTML = '<option value="">Tutte</option>';
       values.forEach(val => {
         const opt = document.createElement("option");
         opt.value = val;
@@ -112,7 +104,7 @@
     }
 
     function updateDropdown(id, searchValue) {
-      const list = id === 'isinSelect' ? fullIsinList : fullNazioneList;
+      const list = fullNazioneList;
       const filtered = list.filter(v => v.toLowerCase().includes(searchValue.toLowerCase()));
       populateSelect(id, filtered);
     }
@@ -123,16 +115,18 @@
     }
 
     function filterTable() {
-      const isinVal = document.getElementById("isinSelect").value;
+      const isinVal = document.getElementById("isinSearch").value.toLowerCase();
       const nazVal = document.getElementById("nazioneSelect").value;
       const nazioneIndex = document.querySelector("#btpTable thead tr").children.length - 1;
       let filtered = tableData;
-      if (isinVal) filtered = filtered.filter(row => row[0] === isinVal);
+      if (isinVal) filtered = filtered.filter(row => row[0].toLowerCase().includes(isinVal));
       if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
       renderTable(filtered);
     }
 
     function sortTable(index) {
+      if (index === 0 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
+
       if (sortCol === index) {
         sortAsc = !sortAsc;
       } else {
