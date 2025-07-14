@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Rendimientos Bonos del Estado</title>
+  <style>
+    /* (STILE INVARIATO – IDENTICO A VERSIONE ITALIANA) */
+    body {
+      font-family: Arial, sans-serif;
+      padding: 1em;
+      background: #f6f6f6;
+      margin: 0;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 0.5em;
+    }
+
+    .language-selector {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      text-align: right;
+    }
+    .language-selector span {
+      font-weight: bold;
+      display: block;
+      margin-bottom: 4px;
+    }
+    .language-selector img {
+      width: 24px;
+      height: 16px;
+      margin-left: 5px;
+      object-fit: cover;
+      vertical-align: middle;
+    }
+
+    .filter-section-wrapper {
+      overflow-x: auto;
+      margin-bottom: 1em;
+    }
+
+    .filter-info-mobile {
+      display: none;
+      font-size: 0.9em;
+      margin-bottom: 5px;
+      font-style: italic;
+      color: #333;
+    }
+
+    .filter-container {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: flex-end;
+      position: relative;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .inline-group {
+      display: flex;
+      align-items: center;
+    }
+
+    .inline-group label {
+      font-weight: bold;
+      margin-right: 5px;
+    }
+
+    select, input[type="text"], input[type="range"] {
+      padding: 5px;
+      margin-top: 3px;
+    }
+
+    .range-group {
+      border: 1px solid #ccc;
+      padding: 5px;
+      background: #fff;
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .range-values {
+      font-size: 0.8em;
+      margin-bottom: 5px;
+    }
+
+    #resetButton {
+      height: 40px;
+      padding: 0 15px;
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    #resetButton:hover {
+      background-color: #c82333;
+    }
+
+    .range-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .result-count {
+      font-size: 1em;
+      margin: 10px 0;
+    }
+
+    .reset-wrapper-top {
+      text-align: right;
+      margin-top: 10px;
+      margin-bottom: -10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background: white;
+      overflow-x: auto;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #e0e0e0;
+      font-weight: bold;
+      cursor: pointer;
+      position: relative;
+    }
+
+    th .sort-icon {
+      font-size: 0.7em;
+      margin-left: 5px;
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    @media (max-width: 768px) {
+      .filter-info-mobile {
+        display: block;
+      }
+
+      .filter-container {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+      }
+
+      .reset-wrapper-top {
+        text-align: center;
+        margin-bottom: 0;
+      }
+
+      .language-selector {
+        position: static;
+        text-align: center;
+        margin-top: 10px;
+        margin-bottom: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Rendimientos Bonos del Estado</h1>
+
+  <div class="language-selector">
+    <span>Idioma</span>
+    <img src="https://flagcdn.com/w20/gb.png" alt="Inglés" title="Inglés">
+    <img src="https://flagcdn.com/w20/fr.png" alt="Francés" title="Francés">
+    <img src="https://flagcdn.com/w20/de.png" alt="Alemán" title="Alemán">
+    <img src="https://flagcdn.com/w20/es.png" alt="Español" title="Español">
+    <img src="https://flagcdn.com/w20/it.png" alt="Italiano" title="Italiano">
+  </div>
+
+  <div class="filter-info-mobile">Desliza para ver los filtros</div>
+  <div class="filter-section-wrapper">
+    <div class="filter-container" id="filterContainer">
+
+      <div class="filter-group">
+        <div class="inline-group">
+          <label for="isinSearch"><strong>Buscar ISIN:</strong></label>
+          <input type="text" id="isinSearch" placeholder="Buscar ISIN" onkeyup="filterTable()">
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <div class="inline-group">
+          <label for="nazioneSearch"><strong>Buscar País:</strong></label>
+          <input type="text" id="nazioneSearch" placeholder="País" onkeyup="updateDropdown('nazioneSelect', this.value)">
+          <select id="nazioneSelect" onchange="filterTable()">
+            <option value="">Todos</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="range-filters" id="rangeFilters"></div>
+    </div>
+  </div>
+
+  <div class="reset-wrapper-top">
+    <button id="resetButton" onclick="resetFilters()">Reiniciar</button>
+  </div>
+
+  <div class="result-count" id="resultCount">Resultados mostrados: 0</div>
+
+  <div class="table-container">
+    <table id="btpTable">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    // (SCRIPT IDENTICO A VERSIONE ITALIANA – RIUTILIZZATO SENZA CAMBIAMENTI)
+    let tableData = [];
+    let originalData = [];
+    let fullNazioneList = [];
+    let sortCol = -1;
+    let sortAsc = true;
+    let minMaxMap = {};
+
+    async function loadCSV() {
+      const response = await fetch("https://raw.githubusercontent.com/LindorMore/dati_titoli_stato/main/dati_btp.csv");
+      const text = await response.text();
+      const rows = text.trim().split("\n").map(row => row.split(","));
+      const [header, ...data] = rows;
+      tableData = data;
+      originalData = [...data];
+
+      const thead = document.querySelector("#btpTable thead");
+      thead.innerHTML = "<tr>" + header.map((col, i) => {
+        const isSortable = i !== 0 && i !== header.length - 1;
+        return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
+      }).join("") + "</tr>";
+
+      const nazioneIndex = header.length - 1;
+      fullNazioneList = [...new Set(data.map(row => row[nazioneIndex]))].sort();
+      populateSelect("nazioneSelect", fullNazioneList);
+
+      createRangeFilters(header);
+      renderTable(data);
+    }
+
+    function createRangeFilters(header) {
+      const container = document.getElementById("rangeFilters");
+      container.innerHTML = "";
+      const numericIndices = [1, 2, 3, 5, 6, 7];
+      numericIndices.forEach((i) => {
+        const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
+        const minVal = Math.floor(Math.min(...values));
+        const maxVal = Math.ceil(Math.max(...values));
+        minMaxMap[i] = { min: minVal, max: maxVal };
+        const div = document.createElement("div");
+        div.className = "range-group";
+        div.innerHTML = `
+          <label><strong>${header[i]}</strong></label>
+          <div class="range-values">Min: <span id="val-min-${i}">${minVal}</span> - Max: <span id="val-max-${i}">${maxVal}</span></div>
+          <input type="range" id="min-${i}" min="${minVal}" max="${maxVal}" value="${minVal}" oninput="updateRange(${i})">
+          <input type="range" id="max-${i}" min="${minVal}" max="${maxVal}" value="${maxVal}" oninput="updateRange(${i})">
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function updateRange(i) {
+      const min = document.getElementById(`min-${i}`).value;
+      const max = document.getElementById(`max-${i}`).value;
+      document.getElementById(`val-min-${i}`).textContent = min;
+      document.getElementById(`val-max-${i}`).textContent = max;
+      filterTable();
+    }
+
+    function resetFilters() {
+      document.getElementById("isinSearch").value = "";
+      document.getElementById("nazioneSearch").value = "";
+      document.getElementById("nazioneSelect").value = "";
+      updateDropdown('nazioneSelect', '');
+
+      const numericIndices = [1, 2, 3, 5, 6, 7];
+      numericIndices.forEach(i => {
+        const { min, max } = minMaxMap[i];
+        document.getElementById(`min-${i}`).value = min;
+        document.getElementById(`max-${i}`).value = max;
+        document.getElementById(`val-min-${i}`).textContent = min;
+        document.getElementById(`val-max-${i}`).textContent = max;
+      });
+
+      tableData = [...originalData];
+      renderTable(tableData);
+    }
+
+    function populateSelect(id, values) {
+      const select = document.getElementById(id);
+      select.innerHTML = '<option value="">Todos</option>';
+      values.forEach(val => {
+        const opt = document.createElement("option");
+        opt.value = val;
+        opt.textContent = val;
+        select.appendChild(opt);
+      });
+    }
+
+    function updateDropdown(id, searchValue) {
+      const list = fullNazioneList;
+      const filtered = list.filter(v => v.toLowerCase().includes(searchValue.toLowerCase()));
+      populateSelect(id, filtered);
+    }
+
+    function renderTable(data) {
+      const tbody = document.querySelector("#btpTable tbody");
+      tbody.innerHTML = data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("");
+      document.getElementById("resultCount").textContent = "Resultados mostrados: " + data.length;
+    }
+
+    function filterTable() {
+      const isinVal = document.getElementById("isinSearch").value.toLowerCase().trim();
+      const nazVal = document.getElementById("nazioneSelect").value;
+      const nazioneIndex = document.querySelector("#btpTable thead tr").children.length - 1;
+      let filtered = [...originalData];
+      if (isinVal) filtered = filtered.filter(row => row[0].toLowerCase().trim().includes(isinVal));
+      if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
+
+      const numericIndices = [1, 2, 3, 5, 6, 7];
+      numericIndices.forEach(i => {
+        const min = parseFloat(document.getElementById(`min-${i}`).value);
+        const max = parseFloat(document.getElementById(`max-${i}`).value);
+        filtered = filtered.filter(row => {
+          const val = parseFloat(row[i]);
+          return !isNaN(val) && val >= min && val <= max;
+        });
+      });
+
+      renderTable(filtered);
+    }
+
+    function sortTable(index) {
+      if (index === 0 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
+
+      if (sortCol === index) {
+        sortAsc = !sortAsc;
+      } else {
+        if (sortCol >= 0) document.getElementById(`icon-${sortCol}`).textContent = "⇅";
+        sortCol = index;
+        sortAsc = true;
+      }
+      const icon = document.getElementById(`icon-${index}`);
+      icon.textContent = sortAsc ? "🔼" : "🔽";
+
+      originalData.sort((a, b) => {
+        const valA = isNaN(a[index]) ? a[index] : parseFloat(a[index]);
+        const valB = isNaN(b[index]) ? b[index] : parseFloat(b[index]);
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
+      });
+      filterTable();
+    }
+
+    loadCSV();
+  </script>
+</body>
+</html>
