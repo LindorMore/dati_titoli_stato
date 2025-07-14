@@ -6,6 +6,7 @@
   <meta name="robots" content="noindex, nofollow" />
   <title>Renditen von Staatsanleihen</title>
   <style>
+    /* Tutto lo stile resta identico, mantenuto come da tua versione */
     body {
       font-family: Arial, sans-serif;
       padding: 1em;
@@ -28,7 +29,7 @@
       display: block;
       margin-bottom: 4px;
     }
-    .language-selector a img {
+    .language-selector img {
       width: 24px;
       height: 16px;
       margin-left: 5px;
@@ -184,16 +185,17 @@
 
   <div class="language-selector">
     <span>Sprache</span>
-    <a href="index_en.html"><img src="https://flagcdn.com/w20/gb.png" alt="Englisch" title="Englisch"></a>
+    <a href="index_en.html"><img src="https://flagcdn.com/w20/gb.png" alt="English" title="English"></a>
     <a href="index_fr.html"><img src="https://flagcdn.com/w20/fr.png" alt="Französisch" title="Französisch"></a>
     <a href="index_de.html"><img src="https://flagcdn.com/w20/de.png" alt="Deutsch" title="Deutsch"></a>
     <a href="index_es.html"><img src="https://flagcdn.com/w20/es.png" alt="Spanisch" title="Spanisch"></a>
     <a href="index_it.html"><img src="https://flagcdn.com/w20/it.png" alt="Italienisch" title="Italienisch"></a>
   </div>
 
-  <div class="filter-info-mobile">Zum Anzeigen der Filter nach rechts scrollen</div>
+  <div class="filter-info-mobile">Zum Scrollen wischen, um Filter zu sehen</div>
   <div class="filter-section-wrapper">
     <div class="filter-container" id="filterContainer">
+
       <div class="filter-group">
         <div class="inline-group">
           <label for="isinSearch"><strong>ISIN suchen:</strong></label>
@@ -223,104 +225,159 @@
 
   <div class="table-container">
     <table id="btpTable">
-      <thead>
-        <tr>
-          <th onclick="sortTable(0)">ISIN</th>
-          <th onclick="sortTable(1)">Land</th>
-          <th onclick="sortTable(2)">Kurs</th>
-          <th onclick="sortTable(3)">Kupon (%)</th>
-          <th onclick="sortTable(4)">Fälligkeitsdatum</th>
-          <th onclick="sortTable(5)">Bruttorendite (%)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- Die Daten werden hier dynamisch eingefügt -->
-      </tbody>
+      <thead></thead>
+      <tbody></tbody>
     </table>
   </div>
 
   <script>
-    const data = [
-      { isin: 'IT0005433195', nazione: 'Italien', prezzo: 101.52, cedola: 0.1, scadenza: '01/12/2025', rendimento: 3.45 },
-      { isin: 'FR0014001NN8', nazione: 'Frankreich', prezzo: 98.34, cedola: 0.0, scadenza: '25/07/2026', rendimento: 2.85 },
-      { isin: 'DE0001102564', nazione: 'Deutschland', prezzo: 99.12, cedola: 0.2, scadenza: '15/08/2027', rendimento: 2.22 },
-      { isin: 'ES0000012B43', nazione: 'Spanien', prezzo: 97.75, cedola: 0.4, scadenza: '30/10/2028', rendimento: 3.12 },
-    ];
+    // JavaScript code remains unchanged because logic and labels are already handled in HTML
+    // and the dataset is language-neutral
+    let tableData = [];
+    let originalData = [];
+    let fullNazioneList = [];
+    let sortCol = -1;
+    let sortAsc = true;
+    let minMaxMap = {};
 
-    function populateTable() {
-      const tbody = document.querySelector('#btpTable tbody');
-      tbody.innerHTML = '';
-      data.forEach(row => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${row.isin}</td>
-          <td>${row.nazione}</td>
-          <td>${row.prezzo.toFixed(2)}</td>
-          <td>${row.cedola.toFixed(2)}</td>
-          <td>${row.scadenza}</td>
-          <td>${row.rendimento.toFixed(2)}</td>
+    async function loadCSV() {
+      const response = await fetch("https://raw.githubusercontent.com/LindorMore/dati_titoli_stato/main/dati_btp.csv");
+      const text = await response.text();
+      const rows = text.trim().split("\n").map(row => row.split(","));
+      const [header, ...data] = rows;
+      tableData = data;
+      originalData = [...data];
+
+      const thead = document.querySelector("#btpTable thead");
+      thead.innerHTML = "<tr>" + header.map((col, i) => {
+        const isSortable = i !== 0 && i !== header.length - 1;
+        return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
+      }).join("") + "</tr>";
+
+      const nazioneIndex = header.length - 1;
+      fullNazioneList = [...new Set(data.map(row => row[nazioneIndex]))].sort();
+      populateSelect("nazioneSelect", fullNazioneList);
+
+      createRangeFilters(header);
+      renderTable(data);
+    }
+
+    function createRangeFilters(header) {
+      const container = document.getElementById("rangeFilters");
+      container.innerHTML = "";
+      const numericIndices = [1, 2, 3, 5, 6, 7];
+      numericIndices.forEach((i) => {
+        const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
+        const minVal = Math.floor(Math.min(...values));
+        const maxVal = Math.ceil(Math.max(...values));
+        minMaxMap[i] = { min: minVal, max: maxVal };
+        const div = document.createElement("div");
+        div.className = "range-group";
+        div.innerHTML = `
+          <label><strong>${header[i]}</strong></label>
+          <div class="range-values">Min: <span id="val-min-${i}">${minVal}</span> - Max: <span id="val-max-${i}">${maxVal}</span></div>
+          <input type="range" id="min-${i}" min="${minVal}" max="${maxVal}" value="${minVal}" oninput="updateRange(${i})">
+          <input type="range" id="max-${i}" min="${minVal}" max="${maxVal}" value="${maxVal}" oninput="updateRange(${i})">
         `;
-        tbody.appendChild(tr);
+        container.appendChild(div);
       });
+    }
+
+    function updateRange(i) {
+      const min = document.getElementById(`min-${i}`).value;
+      const max = document.getElementById(`max-${i}`).value;
+      document.getElementById(`val-min-${i}`).textContent = min;
+      document.getElementById(`val-max-${i}`).textContent = max;
       filterTable();
-    }
-
-    function filterTable() {
-      const isinFilter = document.getElementById('isinSearch').value.toUpperCase();
-      const nazioneFilter = document.getElementById('nazioneSelect').value;
-      const tbody = document.querySelector('#btpTable tbody');
-      let count = 0;
-
-      Array.from(tbody.rows).forEach(row => {
-        const isin = row.cells[0].textContent.toUpperCase();
-        const nazione = row.cells[1].textContent;
-
-        const matchIsin = isin.includes(isinFilter);
-        const matchNazione = !nazioneFilter || nazione === nazioneFilter;
-
-        if (matchIsin && matchNazione) {
-          row.style.display = '';
-          count++;
-        } else {
-          row.style.display = 'none';
-        }
-      });
-
-      document.getElementById('resultCount').textContent = `Angezeigte Ergebnisse: ${count}`;
-    }
-
-    function updateDropdown(selectId, searchValue) {
-      const select = document.getElementById(selectId);
-      const uniqueNations = [...new Set(data.map(item => item.nazione))];
-      const filtered = uniqueNations.filter(nazione => nazione.toLowerCase().includes(searchValue.toLowerCase()));
-      select.innerHTML = `<option value="">Alle</option>` + filtered.map(n => `<option value="${n}">${n}</option>`).join('');
     }
 
     function resetFilters() {
-      document.getElementById('isinSearch').value = '';
-      document.getElementById('nazioneSearch').value = '';
+      document.getElementById("isinSearch").value = "";
+      document.getElementById("nazioneSearch").value = "";
+      document.getElementById("nazioneSelect").value = "";
       updateDropdown('nazioneSelect', '');
-      document.getElementById('nazioneSelect').value = '';
+
+      const numericIndices = [1, 2, 3, 5, 6, 7];
+      numericIndices.forEach(i => {
+        const { min, max } = minMaxMap[i];
+        document.getElementById(`min-${i}`).value = min;
+        document.getElementById(`max-${i}`).value = max;
+        document.getElementById(`val-min-${i}`).textContent = min;
+        document.getElementById(`val-max-${i}`).textContent = max;
+      });
+
+      tableData = [...originalData];
+      renderTable(tableData);
+    }
+
+    function populateSelect(id, values) {
+      const select = document.getElementById(id);
+      select.innerHTML = '<option value="">Alle</option>';
+      values.forEach(val => {
+        const opt = document.createElement("option");
+        opt.value = val;
+        opt.textContent = val;
+        select.appendChild(opt);
+      });
+    }
+
+    function updateDropdown(id, searchValue) {
+      const list = fullNazioneList;
+      const filtered = list.filter(v => v.toLowerCase().includes(searchValue.toLowerCase()));
+      populateSelect(id, filtered);
+    }
+
+    function renderTable(data) {
+      const tbody = document.querySelector("#btpTable tbody");
+      tbody.innerHTML = data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("");
+      document.getElementById("resultCount").textContent = "Angezeigte Ergebnisse: " + data.length;
+    }
+
+    function filterTable() {
+      const isinVal = document.getElementById("isinSearch").value.toLowerCase().trim();
+      const nazVal = document.getElementById("nazioneSelect").value;
+      const nazioneIndex = document.querySelector("#btpTable thead tr").children.length - 1;
+      let filtered = [...originalData];
+      if (isinVal) filtered = filtered.filter(row => row[0].toLowerCase().trim().includes(isinVal));
+      if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
+
+      const numericIndices = [1, 2, 3, 5, 6, 7];
+      numericIndices.forEach(i => {
+        const min = parseFloat(document.getElementById(`min-${i}`).value);
+        const max = parseFloat(document.getElementById(`max-${i}`).value);
+        filtered = filtered.filter(row => {
+          const val = parseFloat(row[i]);
+          return !isNaN(val) && val >= min && val <= max;
+        });
+      });
+
+      renderTable(filtered);
+    }
+
+    function sortTable(index) {
+      if (index === 0 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
+
+      if (sortCol === index) {
+        sortAsc = !sortAsc;
+      } else {
+        if (sortCol >= 0) document.getElementById(`icon-${sortCol}`).textContent = "⇅";
+        sortCol = index;
+        sortAsc = true;
+      }
+      const icon = document.getElementById(`icon-${index}`);
+      icon.textContent = sortAsc ? "🔼" : "🔽";
+
+      originalData.sort((a, b) => {
+        const valA = isNaN(a[index]) ? a[index] : parseFloat(a[index]);
+        const valB = isNaN(b[index]) ? b[index] : parseFloat(b[index]);
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
+      });
       filterTable();
     }
 
-    function sortTable(columnIndex) {
-      const table = document.getElementById("btpTable");
-      const rows = Array.from(table.rows).slice(1);
-      const isNumeric = !isNaN(rows[0].cells[columnIndex].textContent);
-      const sortedRows = rows.sort((a, b) => {
-        const aText = a.cells[columnIndex].textContent.trim();
-        const bText = b.cells[columnIndex].textContent.trim();
-        return isNumeric ? parseFloat(aText) - parseFloat(bText) : aText.localeCompare(bText);
-      });
-      rows.forEach(row => row.remove());
-      sortedRows.forEach(row => table.tBodies[0].appendChild(row));
-    }
-
-    window.onload = function() {
-      populateTable();
-      updateDropdown('nazioneSelect', '');
-    };
+    loadCSV();
   </script>
 </body>
 </html>
