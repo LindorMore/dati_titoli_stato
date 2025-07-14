@@ -137,17 +137,21 @@
     function createRangeFilters(header) {
       const container = document.getElementById("rangeFilters");
       container.innerHTML = "";
-      for (let i = 1; i <= 7; i++) {
+      const numericIndices = [1, 2, 3, 4, 6, 7];
+      numericIndices.forEach((i) => {
+        const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
+        const minVal = Math.min(...values);
+        const maxVal = Math.max(...values);
         const div = document.createElement("div");
         div.className = "range-group";
         div.innerHTML = `
           <label>${header[i]}</label>
-          <div class="range-values">Minimo: <span id="val-min-${i}">0</span> - Massimo: <span id="val-max-${i}">100</span></div>
-          <input type="range" id="min-${i}" min="0" max="100" value="0" oninput="updateRange(${i})">
-          <input type="range" id="max-${i}" min="0" max="100" value="100" oninput="updateRange(${i})">
+          <div class="range-values">Minimo: <span id="val-min-${i}">${minVal}</span> - Massimo: <span id="val-max-${i}">${maxVal}</span></div>
+          <input type="range" id="min-${i}" min="${minVal}" max="${maxVal}" value="${minVal}" oninput="updateRange(${i})">
+          <input type="range" id="max-${i}" min="${minVal}" max="${maxVal}" value="${maxVal}" oninput="updateRange(${i})">
         `;
         container.appendChild(div);
-      }
+      });
     }
 
     function updateRange(i) {
@@ -163,13 +167,19 @@
       document.getElementById("nazioneSearch").value = "";
       document.getElementById("nazioneSelect").value = "";
       updateDropdown('nazioneSelect', '');
-      for (let i = 1; i <= 7; i++) {
-        document.getElementById(`min-${i}`).value = 0;
-        document.getElementById(`max-${i}`).value = 100;
-        document.getElementById(`val-min-${i}`).textContent = "0";
-        document.getElementById(`val-max-${i}`).textContent = "100";
-      }
-      filterTable();
+
+      const numericIndices = [1, 2, 3, 4, 6, 7];
+      numericIndices.forEach(i => {
+        const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
+        const minVal = Math.min(...values);
+        const maxVal = Math.max(...values);
+        document.getElementById(`min-${i}`).value = minVal;
+        document.getElementById(`max-${i}`).value = maxVal;
+        document.getElementById(`val-min-${i}`).textContent = minVal;
+        document.getElementById(`val-max-${i}`).textContent = maxVal;
+      });
+
+      renderTable(originalData);
     }
 
     function populateSelect(id, values) {
@@ -202,14 +212,15 @@
       if (isinVal) filtered = filtered.filter(row => row[0].toLowerCase().includes(isinVal));
       if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
 
-      for (let i = 1; i <= 7; i++) {
+      const numericIndices = [1, 2, 3, 4, 6, 7];
+      numericIndices.forEach(i => {
         const min = parseFloat(document.getElementById(`min-${i}`).value);
         const max = parseFloat(document.getElementById(`max-${i}`).value);
         filtered = filtered.filter(row => {
           const val = parseFloat(row[i]);
           return !isNaN(val) && val >= min && val <= max;
         });
-      }
+      });
 
       renderTable(filtered);
     }
