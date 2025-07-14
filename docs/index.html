@@ -28,6 +28,21 @@
       text-align: center;
     }
 
+    .mobile-notice {
+      display: none;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 0.95em;
+      font-weight: bold;
+      color: #333;
+    }
+
+    @media (max-width: 768px) {
+      .mobile-notice {
+        display: block;
+      }
+    }
+
     .filter-wrapper {
       background: var(--bg-white);
       padding: 15px;
@@ -48,6 +63,20 @@
       display: flex;
       flex-direction: column;
       min-width: 180px;
+    }
+
+    .nazione-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 180px;
+    }
+
+    .nazione-group input {
+      margin-bottom: 5px;
+    }
+
+    .nazione-group select {
+      align-self: flex-end;
     }
 
     .filter-group label {
@@ -78,11 +107,21 @@
       background-color: var(--danger-hover);
     }
 
+    #resultCount {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
     table {
       border-collapse: collapse;
       width: 100%;
       margin-top: 1em;
       background: var(--bg-white);
+      min-width: 800px;
     }
 
     th, td {
@@ -122,6 +161,8 @@
 <body>
   <h1>📈 Rendimenti Titoli di Stato</h1>
 
+  <div class="mobile-notice">📱 Scorri per visualizzare i filtri</div>
+
   <div class="filter-wrapper">
     <div class="filters">
       <div class="filter-group">
@@ -129,7 +170,7 @@
         <input type="text" id="isinSearch" placeholder="Cerca ISIN" onkeyup="filterTable()">
       </div>
 
-      <div class="filter-group">
+      <div class="nazione-group">
         <label for="nazioneSearch">Cerca Nazione:</label>
         <input type="text" id="nazioneSearch" placeholder="Filtra opzioni" onkeyup="updateDropdown('nazioneSelect', this.value)">
         <select id="nazioneSelect" onchange="filterTable()">
@@ -146,10 +187,14 @@
     </div>
   </div>
 
-  <table id="btpTable">
-    <thead></thead>
-    <tbody></tbody>
-  </table>
+  <div id="resultCount"></div>
+
+  <div class="table-wrapper">
+    <table id="btpTable">
+      <thead></thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
   <script>
     let tableData = [];
@@ -249,6 +294,7 @@
     function renderTable(data) {
       const tbody = document.querySelector("#btpTable tbody");
       tbody.innerHTML = data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("");
+      document.getElementById("resultCount").textContent = `Titoli visualizzati: ${data.length}`;
     }
 
     function filterTable() {
