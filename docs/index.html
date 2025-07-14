@@ -36,17 +36,17 @@
       vertical-align: middle;
     }
 
+    .filter-section-wrapper {
+      overflow-x: auto;
+      margin-bottom: 1em;
+    }
+
     .filter-info-mobile {
       display: none;
       font-size: 0.9em;
       margin-bottom: 5px;
       font-style: italic;
       color: #333;
-    }
-
-    .filter-section-wrapper {
-      overflow-x: auto;
-      margin-bottom: 1em;
     }
 
     .filter-container {
@@ -65,18 +65,14 @@
       flex-direction: column;
     }
 
-    .filter-group label {
-      font-weight: bold;
-    }
-
     .inline-group {
       display: flex;
-      flex-direction: column;
+      align-items: center;
     }
 
     .inline-group label {
       font-weight: bold;
-      margin-bottom: 3px;
+      margin-right: 5px;
     }
 
     select, input[type="text"], input[type="range"] {
@@ -92,10 +88,6 @@
       min-width: 150px;
     }
 
-    .range-group label {
-      font-weight: bold;
-    }
-
     .range-values {
       font-size: 0.8em;
       margin-bottom: 5px;
@@ -109,7 +101,7 @@
       border: none;
       border-radius: 4px;
       cursor: pointer;
-      font-weight: bold;
+      margin-top: 10px;
     }
     #resetButton:hover {
       background-color: #c82333;
@@ -127,11 +119,18 @@
       margin: 10px 0;
     }
 
+    .reset-wrapper-top {
+      text-align: right;
+      margin-top: 10px;
+      margin-bottom: -10px;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
       background: white;
+      overflow-x: auto;
     }
 
     th, td {
@@ -156,13 +155,6 @@
       overflow-x: auto;
     }
 
-    .reset-wrapper {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      z-index: 999;
-    }
-
     @media (max-width: 768px) {
       .filter-info-mobile {
         display: block;
@@ -171,31 +163,11 @@
       .filter-container {
         flex-wrap: nowrap;
         overflow-x: auto;
-        gap: 15px;
       }
 
-      .filter-group, .range-group {
-        flex: 0 0 auto;
-        min-width: 180px;
-      }
-
-      .reset-wrapper {
-        position: fixed;
-        top: 10px;
-        right: 10px;
-        z-index: 1000;
-      }
-
-      #resetButton {
-        margin-top: 0;
-      }
-    }
-
-    @media (min-width: 769px) {
-      .reset-wrapper {
-        position: absolute;
-        top: 0;
-        right: -100px;
+      .reset-wrapper-top {
+        text-align: center;
+        margin-bottom: 0;
       }
     }
   </style>
@@ -210,10 +182,6 @@
     <img src="https://flagcdn.com/w20/de.png" alt="Deutsch" title="Deutsch">
     <img src="https://flagcdn.com/w20/es.png" alt="Español" title="Español">
     <img src="https://flagcdn.com/w20/it.png" alt="Italiano" title="Italiano">
-  </div>
-
-  <div class="reset-wrapper">
-    <button id="resetButton" onclick="resetFilters()">Reset</button>
   </div>
 
   <div class="filter-info-mobile">Scorri per visualizzare i filtri</div>
@@ -236,6 +204,10 @@
 
       <div class="range-filters" id="rangeFilters"></div>
     </div>
+  </div>
+
+  <div class="reset-wrapper-top">
+    <button id="resetButton" onclick="resetFilters()">Reset</button>
   </div>
 
   <div class="result-count" id="resultCount">Risultati mostrati: 0</div>
