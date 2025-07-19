@@ -22,7 +22,7 @@ options.add_argument("--headless")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 driver = webdriver.Chrome(options=options)
-wait = WebDriverWait(driver, 10)
+wait = WebDriverWait(driver, 15)
 
 # === ESTRAZIONE DATI DA BORSA ITALIANA ===
 def estrai_dati(isin):
