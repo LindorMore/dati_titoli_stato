@@ -9,7 +9,7 @@ import time
 import os
 
 # === CONFIG ===
-ISIN_LIST = ["XS2571924070", "XS1837994794", "US900123BB58", "XS2201851685", "US77586TAE64", "IT0005484552"]
+ISIN_LIST = ["XS2571924070", "XS1837994794", "US900123BB58", "XS2201851685", "US77586TAE64","IT0005484552"]
 CSV_FILE = "dati_btp.csv"
 GITHUB_TOKEN = os.environ["MY_GITHUB_TOKEN"]
 REPO_NAME = "LindorMore/dati_titoli_stato"
@@ -33,7 +33,7 @@ def estrai_dati(isin):
         prezzo_live_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[1]/article/div/div/div[2]/div/span[1]/strong'
         prezzo_chiusura_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[5]/article/div/div[2]/div[1]/table/tbody/tr[1]/td[2]/span'
         cedola_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[9]/td[2]/span'
-        periodicita_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[6]/td[2]/span'
+        cedola_annua_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[6]/td[2]/span'
         scadenza_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[5]/td[2]/span'
         nazione_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[1]/table/tbody/tr[2]/td[2]/span'
 
@@ -43,12 +43,17 @@ def estrai_dati(isin):
         except:
             prezzo = float(driver.find_element(By.XPATH, prezzo_chiusura_xpath).text.replace(",", "."))
 
-        # Cedola
-        cedola_str = driver.find_element(By.XPATH, cedola_xpath).text.strip().replace(",", ".").replace("%", "")
-        cedola_val = float(cedola_str)
-
-        # Periodicità
-        periodicita = driver.find_element(By.XPATH, periodicita_xpath).text.strip().lower()
+        # Cedola semestrale (o annua divisa per 2)
+        try:
+            cedola_str = driver.find_element(By.XPATH, cedola_xpath).text.strip().replace(",", ".").replace("%", "")
+            cedola_semestrale = float(cedola_str)
+        except:
+            try:
+                cedola_annua_str = driver.find_element(By.XPATH, cedola_annua_xpath).text.strip().replace(",", ".").replace("%", "")
+                cedola_annua = float(cedola_annua_str)
+                cedola_semestrale = cedola_annua / 2
+            except:
+                raise ValueError("Cedola non trovata (né semestrale né annua)")
 
         # Scadenza
         scadenza_text = driver.find_element(By.XPATH, scadenza_xpath).text.strip()
@@ -60,41 +65,26 @@ def estrai_dati(isin):
         # Nazione
         nazione = driver.find_element(By.XPATH, nazione_xpath).text.strip()
 
-        return prezzo, cedola_val, periodicita, scadenza_data, nazione
+        return prezzo, cedola_semestrale, scadenza_data, nazione
 
     except Exception as e:
         print(f"❌ Errore per ISIN {isin}: {e}")
-        return None, None, None, None, None
+        return None, None, None, None
 
 # === CALCOLI ===
-def calcoli(isin, prezzo, cedola_val, periodicita, scadenza_data, nazione):
+def calcoli(isin, prezzo, cedola_semestrale, scadenza_data, nazione):
     oggi = datetime.now()
     mesi_alla_scadenza = (scadenza_data.year - oggi.year) * 12 + scadenza_data.month - oggi.month
-    if mesi_alla_scadenza < 0:
-        mesi_alla_scadenza = 0
-
-    if "annuale" in periodicita:
-        n_cedole = mesi_alla_scadenza // 12
-        totale_cedole = cedola_val * n_cedole
-        cedola_annua_su_prezzo = (cedola_val / prezzo) * 100
-    elif "semestrale" in periodicita:
-        n_cedole = mesi_alla_scadenza // 6
-        totale_cedole = cedola_val * n_cedole
-        cedola_annua_su_prezzo = (cedola_val * 2 / prezzo) * 100
-    else:
-        # default: semestrale
-        n_cedole = mesi_alla_scadenza // 6
-        totale_cedole = cedola_val * n_cedole
-        cedola_annua_su_prezzo = (cedola_val * 2 / prezzo) * 100
-
+    n_cedole = mesi_alla_scadenza // 6
+    totale_cedole = cedola_semestrale * n_cedole
     rendimento_totale = ((totale_cedole + 100 - prezzo) / prezzo) * 100
-    anni_alla_scadenza = mesi_alla_scadenza / 12 if mesi_alla_scadenza > 0 else 0
+    anni_alla_scadenza = mesi_alla_scadenza / 12
     rendimento_annuo = rendimento_totale / anni_alla_scadenza if anni_alla_scadenza > 0 else 0
-
+    cedola_annua_su_prezzo = (cedola_semestrale * 2 / prezzo) * 100
     return [
         isin,
         round(prezzo, 2),
-        round(cedola_val, 2),
+        round(cedola_semestrale, 2),
         round(cedola_annua_su_prezzo, 2),
         scadenza_data.strftime("%d/%m/%Y"),
         mesi_alla_scadenza,
@@ -104,13 +94,13 @@ def calcoli(isin, prezzo, cedola_val, periodicita, scadenza_data, nazione):
     ]
 
 # === ESTRAZIONE E CALCOLO ===
-dati_finali = [["ISIN", "Prezzo", "Cedola Lorda", "Cedola Annua Lorda %", "Data di Scadenza", "Mesi alla Scadenza", "Rendimento Totale Lordo %", "Rendimento lordo Annuo %", "Nazione"]]
+dati_finali = [["ISIN", "Prezzo", "Cedola Semestrale Lorda", "Cedola Annua Lorda %", "Data di Scadenza", "Mesi alla Scadenza", "Rendimento Totale Lordo %", "Rendimento lordo Annuo %", "Nazione"]]
 
 for isin in ISIN_LIST:
     print(f"🔎 Elaborazione {isin}...")
-    prezzo, cedola_val, periodicita, scadenza, nazione = estrai_dati(isin)
+    prezzo, cedola_semestrale, scadenza, nazione = estrai_dati(isin)
     if prezzo is not None:
-        dati_finali.append(calcoli(isin, prezzo, cedola_val, periodicita, scadenza, nazione))
+        dati_finali.append(calcoli(isin, prezzo, cedola_semestrale, scadenza, nazione))
 
 driver.quit()
 
