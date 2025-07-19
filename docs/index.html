@@ -261,7 +261,7 @@
 
       const thead = document.querySelector("#btpTable thead");
       thead.innerHTML = "<tr>" + header.map((col, i) => {
-        const isSortable = i !== 0 && i !== 5 && i !== 9 && i !== 10 && i !== header.length - 1;
+        const isSortable = i !== 0 && i !== 4 && i !== 9 && i !== 10 && i !== header.length - 1;
         return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
       }).join("") + "</tr>";
 
