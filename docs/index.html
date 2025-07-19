@@ -247,7 +247,7 @@
 
       const thead = document.querySelector("#btpTable thead");
       thead.innerHTML = "<tr>" + header.map((col, i) => {
-        // Disabilita ordinamento su colonne 0, 8, 9 e ultima colonna
+     
         const isSortable = i !== 0 && i !== 9 && i !== 10 && i !== header.length - 1;
         return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
       }).join("") + "</tr>";
@@ -373,7 +373,7 @@
     }
 
     function sortTable(index) {
-      // Disabilita ordinamento su colonne 0, 8, 9 e ultima colonna
+      
       if (index === 0 || index === 4 || index === 9 || index === 10 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
 
       if (sortCol === index) {
