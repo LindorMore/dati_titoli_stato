@@ -1,6 +1,6 @@
-ISIN,Prezzo,Cedola,Tipo Cedola,Cedola Annua % su Prezzo,Data di Scadenza,Tempo alla Scadenza,Mesi alla Scadenza,Rendimento Totale Lordo %,Rendimento lordo Annuo %,Nazione
-XS2571924070,102.58,7.62,Annua,7.43,17/01/2053,27 annoi e 6 mesei,330,198.18,7.21,REPUBLIC OF ROMANIA
-XS1837994794,77.83,5.12,Annua,6.58,15/06/2048,22 annoi e 11 mesei,275,173.35,7.56,REPUBLIC OF ROMANIA
-XS2201851685,63.45,4.0,Annua,6.3,14/02/2051,25 annoi e 7 mesei,307,215.21,8.41,REPUBLIC OF ROMANIA
-US77586TAE64,90.79,6.12,Annua,6.75,22/01/2044,18 annoi e 6 mesei,222,131.58,7.11,REPUBLIC OF ROMANIA
-IT0005484552,98.5,0.55,Semestrale,1.12,01/04/2027,1 anno e 9 mesei,21,3.2,1.83,REPUBLIC OF ITALY
+ISIN,Prezzo,Cedola Lorda,Tipo Cedola,Cedola Annua Lorda %,Data di Scadenza,Scadenza (anni e mesi),Rendimento Totale Lordo %,Rendimento lordo Annuo %,Nazione
+XS2571924070,102.58,7.62,annua,7.43,17/01/2053,27 annoi e 6 mesei,198.18,7.21,REPUBLIC OF ROMANIA
+XS1837994794,77.83,5.12,annua,6.58,15/06/2048,22 annoi e 11 mesei,173.35,7.56,REPUBLIC OF ROMANIA
+XS2201851685,63.45,4.0,annua,6.3,14/02/2051,25 annoi e 7 mesei,215.21,8.41,REPUBLIC OF ROMANIA
+US77586TAE64,90.79,6.12,annua,6.75,22/01/2044,18 annoi e 6 mesei,131.58,7.11,REPUBLIC OF ROMANIA
+IT0005484552,98.5,0.55,semestrale,1.12,01/04/2027,1 anno e 9 mesei,3.2,1.83,REPUBLIC OF ITALY
