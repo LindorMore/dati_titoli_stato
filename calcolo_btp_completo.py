@@ -119,16 +119,16 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
         durata_str,
         round(rendimento_totale, 2),
         round(rendimento_annuo, 2),
-        nazione,
         mercato,
-        valuta
+        valuta,
+        nazione
     ]
 
 # === ESTRAZIONE E CALCOLO ===
 dati_finali = [[
     "ISIN", "Prezzo", "Cedola Semestrale Lorda", "Cedola Annua Lorda %", "Tipo Cedola",
     "Data di Scadenza", "Durata (anni e mesi)", "Rendimento Totale Lordo %", "Rendimento lordo Annuo %",
-    "Nazione", "Mercato", "Valuta"
+    "Mercato", "Valuta", "Nazione"
 ]]
 
 for isin in ISIN_LIST:
