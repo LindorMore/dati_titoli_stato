@@ -338,7 +338,7 @@
       if (isinVal) filtered = filtered.filter(row => row[0].toLowerCase().trim().includes(isinVal));
       if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
 
-      const numericIndices = [1, 2, 3, 5, 6, 7];
+      const numericIndices = [1, 2, 3, 6, 7, 8];
       numericIndices.forEach(i => {
         const min = parseFloat(document.getElementById(`min-${i}`).value);
         const max = parseFloat(document.getElementById(`max-${i}`).value);
