@@ -9,7 +9,7 @@ import time
 import os
 
 # === CONFIG ===
-ISIN_LIST = ["XS2571924070", "XS1837994794", "US900123BB58", "XS2201851685", "US77586TAE64","IT0005484552"]
+ISIN_LIST = ["XS2571924070", "XS1837994794", "US900123BB58", "XS2201851685", "US77586TAE64", "IT0005484552"]
 CSV_FILE = "dati_btp.csv"
 GITHUB_TOKEN = os.environ["MY_GITHUB_TOKEN"]
 REPO_NAME = "LindorMore/dati_titoli_stato"
@@ -29,31 +29,30 @@ def estrai_dati(isin):
     time.sleep(7)
 
     try:
-        # XPaths aggiornati
+        # XPaths
         prezzo_live_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[1]/article/div/div/div[2]/div/span[1]/strong'
         prezzo_chiusura_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[5]/article/div/div[2]/div[1]/table/tbody/tr[1]/td[2]/span'
-        cedola_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[9]/td[2]/span'
-        cedola_annua_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[6]/td[2]/span'
+        cedola_semestrale_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[9]/td[2]/span'
+        cedola_annua_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[10]/td[2]/span'
         scadenza_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[5]/td[2]/span'
         nazione_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[1]/table/tbody/tr[2]/td[2]/span'
 
-        # Prezzo: live o chiusura
+        # Prezzo
         try:
             prezzo = float(driver.find_element(By.XPATH, prezzo_live_xpath).text.replace(",", "."))
         except:
             prezzo = float(driver.find_element(By.XPATH, prezzo_chiusura_xpath).text.replace(",", "."))
 
-        # Cedola semestrale (o annua divisa per 2)
+        # Cedola
         try:
-            cedola_str = driver.find_element(By.XPATH, cedola_xpath).text.strip().replace(",", ".").replace("%", "")
+            cedola_str = driver.find_element(By.XPATH, cedola_semestrale_xpath).text.strip().replace(",", ".").replace("%", "")
             cedola_semestrale = float(cedola_str)
         except:
             try:
                 cedola_annua_str = driver.find_element(By.XPATH, cedola_annua_xpath).text.strip().replace(",", ".").replace("%", "")
-                cedola_annua = float(cedola_annua_str)
-                cedola_semestrale = cedola_annua / 2
+                cedola_semestrale = float(cedola_annua_str) / 2
             except:
-                raise ValueError("Cedola non trovata (né semestrale né annua)")
+                raise Exception("Cedola non trovata (né semestrale né annua)")
 
         # Scadenza
         scadenza_text = driver.find_element(By.XPATH, scadenza_xpath).text.strip()
@@ -123,3 +122,4 @@ with open(CSV_FILE, "r") as f:
     except:
         repo.create_file(CSV_FILE, COMMIT_MESSAGE, contenuto)
         print("🆕 File caricato su GitHub.")
+
