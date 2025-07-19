@@ -248,7 +248,7 @@
       const thead = document.querySelector("#btpTable thead");
       thead.innerHTML = "<tr>" + header.map((col, i) => {
         // Disabilita ordinamento su colonne 0, 8, 9 e ultima colonna
-        const isSortable = i !== 0 && i !== 8 && i !== 9 && i !== header.length - 1;
+        const isSortable = i !== 0 && i !== 9 && i !== 10 && i !== header.length - 1;
         return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
       }).join("") + "</tr>";
 
@@ -263,7 +263,7 @@
     function createRangeFilters(header) {
       const container = document.getElementById("rangeFilters");
       container.innerHTML = "";
-      const numericIndices = [1, 2, 3, 5, 6, 7];
+      const numericIndices = [1, 2, 3, 6, 7, 8];
       numericIndices.forEach((i) => {
         const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
         const minVal = Math.floor(Math.min(...values));
@@ -295,7 +295,7 @@
       document.getElementById("nazioneSelect").value = "";
       updateDropdown('nazioneSelect', '');
 
-      const numericIndices = [1, 2, 3, 5, 6, 7];
+      const numericIndices = [1, 2, 3, 6, 7, 8];
       numericIndices.forEach(i => {
         const { min, max } = minMaxMap[i];
         document.getElementById(`min-${i}`).value = min;
@@ -327,7 +327,7 @@
     function filterTable() {
       const isinVal = document.getElementById("isinSearch").value.toUpperCase();
       const nazioneVal = document.getElementById("nazioneSelect").value;
-      const numericIndices = [1, 2, 3, 5, 6, 7];
+      const numericIndices = [1, 2, 3, 6, 7, 8];
 
       let filtered = originalData.filter(row => {
         if (isinVal && !row[0].toUpperCase().includes(isinVal)) return false;
@@ -374,7 +374,7 @@
 
     function sortTable(index) {
       // Disabilita ordinamento su colonne 0, 8, 9 e ultima colonna
-      if (index === 0 || index === 8 || index === 9 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
+      if (index === 0 || index === 9 || index === 10 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
 
       if (sortCol === index) {
         sortAsc = !sortAsc;
