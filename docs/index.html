@@ -262,7 +262,7 @@
     function createRangeFilters(header) {
       const container = document.getElementById("rangeFilters");
       container.innerHTML = "";
-      const numericIndices = [1, 2, 3, 5, 6, 7];
+      const numericIndices = [1, 2, 3, 6, 7, 8];
       numericIndices.forEach((i) => {
         const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
         const minVal = Math.floor(Math.min(...values));
@@ -294,7 +294,7 @@
       document.getElementById("nazioneSelect").value = "";
       updateDropdown('nazioneSelect', '');
 
-      const numericIndices = [1, 2, 3, 5, 6, 7];
+      const numericIndices = [1, 2, 3, 6, 7, 8];
       numericIndices.forEach(i => {
         const { min, max } = minMaxMap[i];
         document.getElementById(`min-${i}`).value = min;
