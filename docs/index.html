@@ -247,7 +247,8 @@
 
       const thead = document.querySelector("#btpTable thead");
       thead.innerHTML = "<tr>" + header.map((col, i) => {
-        const isSortable = i !== 0 && i !== header.length - 1;
+        // Disabilita ordinamento su colonne 0, 8, 9 e ultima colonna
+        const isSortable = i !== 0 && i !== 8 && i !== 9 && i !== header.length - 1;
         return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
       }).join("") + "</tr>";
 
@@ -262,7 +263,7 @@
     function createRangeFilters(header) {
       const container = document.getElementById("rangeFilters");
       container.innerHTML = "";
-      const numericIndices = [1, 2, 3, 6, 7, 8];
+      const numericIndices = [1, 2, 3, 5, 6, 7];
       numericIndices.forEach((i) => {
         const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
         const minVal = Math.floor(Math.min(...values));
@@ -294,7 +295,7 @@
       document.getElementById("nazioneSelect").value = "";
       updateDropdown('nazioneSelect', '');
 
-      const numericIndices = [1, 2, 3, 6, 7, 8];
+      const numericIndices = [1, 2, 3, 5, 6, 7];
       numericIndices.forEach(i => {
         const { min, max } = minMaxMap[i];
         document.getElementById(`min-${i}`).value = min;
@@ -302,79 +303,104 @@
         document.getElementById(`val-min-${i}`).textContent = min;
         document.getElementById(`val-max-${i}`).textContent = max;
       });
-
-      tableData = [...originalData];
-      renderTable(tableData);
+      sortCol = -1;
+      sortAsc = true;
+      renderTable(originalData);
     }
 
-    function populateSelect(id, values) {
-      const select = document.getElementById(id);
+    function populateSelect(selectId, options) {
+      const select = document.getElementById(selectId);
       select.innerHTML = '<option value="">Tutte</option>';
-      values.forEach(val => {
-        const opt = document.createElement("option");
-        opt.value = val;
-        opt.textContent = val;
-        select.appendChild(opt);
+      options.forEach(opt => {
+        select.innerHTML += `<option value="${opt}">${opt}</option>`;
       });
     }
 
-    function updateDropdown(id, searchValue) {
-      const list = fullNazioneList;
-      const filtered = list.filter(v => v.toLowerCase().includes(searchValue.toLowerCase()));
-      populateSelect(id, filtered);
-    }
-
-    function renderTable(data) {
-      const tbody = document.querySelector("#btpTable tbody");
-      tbody.innerHTML = data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("");
-      document.getElementById("resultCount").textContent = "Risultati mostrati: " + data.length;
+    function updateDropdown(selectId, filterText) {
+      filterText = filterText.toLowerCase();
+      const filtered = fullNazioneList.filter(n => n.toLowerCase().includes(filterText));
+      populateSelect(selectId, filtered);
+      document.getElementById(selectId).value = "";
+      filterTable();
     }
 
     function filterTable() {
-      const isinVal = document.getElementById("isinSearch").value.toLowerCase().trim();
-      const nazVal = document.getElementById("nazioneSelect").value;
-      const nazioneIndex = document.querySelector("#btpTable thead tr").children.length - 1;
-      let filtered = [...originalData];
-      if (isinVal) filtered = filtered.filter(row => row[0].toLowerCase().trim().includes(isinVal));
-      if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
+      const isinVal = document.getElementById("isinSearch").value.toUpperCase();
+      const nazioneVal = document.getElementById("nazioneSelect").value;
+      const numericIndices = [1, 2, 3, 5, 6, 7];
 
-      const numericIndices = [1, 2, 3, 6, 7, 8];
-      numericIndices.forEach(i => {
-        const min = parseFloat(document.getElementById(`min-${i}`).value);
-        const max = parseFloat(document.getElementById(`max-${i}`).value);
-        filtered = filtered.filter(row => {
+      let filtered = originalData.filter(row => {
+        if (isinVal && !row[0].toUpperCase().includes(isinVal)) return false;
+        if (nazioneVal && row[row.length - 1] !== nazioneVal) return false;
+
+        for (const i of numericIndices) {
+          const min = parseFloat(document.getElementById(`min-${i}`).value);
+          const max = parseFloat(document.getElementById(`max-${i}`).value);
           const val = parseFloat(row[i]);
-          return !isNaN(val) && val >= min && val <= max;
-        });
+          if (isNaN(val) || val < min || val > max) return false;
+        }
+        return true;
       });
+
+      if (sortCol >= 0) {
+        filtered.sort((a, b) => {
+          let valA = a[sortCol];
+          let valB = b[sortCol];
+
+          if (!isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB))) {
+            valA = parseFloat(valA);
+            valB = parseFloat(valB);
+          } else {
+            valA = valA.toString();
+            valB = valB.toString();
+          }
+
+          if (valA < valB) return sortAsc ? -1 : 1;
+          if (valA > valB) return sortAsc ? 1 : -1;
+          return 0;
+        });
+      }
 
       renderTable(filtered);
     }
 
+    function renderTable(data) {
+      const tbody = document.querySelector("#btpTable tbody");
+      tbody.innerHTML = data.map(row => {
+        return `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`;
+      }).join('');
+      document.getElementById("resultCount").textContent = `Risultati mostrati: ${data.length}`;
+    }
+
     function sortTable(index) {
-      if (index === 0 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
+      // Disabilita ordinamento su colonne 0, 8, 9 e ultima colonna
+      if (index === 0 || index === 8 || index === 9 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
 
       if (sortCol === index) {
         sortAsc = !sortAsc;
       } else {
-        if (sortCol >= 0) document.getElementById(`icon-${sortCol}`).textContent = "⇅";
         sortCol = index;
         sortAsc = true;
       }
-      const icon = document.getElementById(`icon-${index}`);
-      icon.textContent = sortAsc ? "🔼" : "🔽";
 
-      originalData.sort((a, b) => {
-        const valA = isNaN(a[index]) ? a[index] : parseFloat(a[index]);
-        const valB = isNaN(b[index]) ? b[index] : parseFloat(b[index]);
-        if (valA < valB) return sortAsc ? -1 : 1;
-        if (valA > valB) return sortAsc ? 1 : -1;
-        return 0;
-      });
+      updateSortIcons();
       filterTable();
     }
 
-    loadCSV();
+    function updateSortIcons() {
+      const headers = document.querySelectorAll("#btpTable thead th");
+      headers.forEach((th, i) => {
+        const icon = document.getElementById(`icon-${i}`);
+        if (!icon) return;
+        if (i === sortCol) {
+          icon.textContent = sortAsc ? '▲' : '▼';
+        } else {
+          icon.textContent = '⇅';
+        }
+      });
+    }
+
+    window.onload = loadCSV;
   </script>
 </body>
 </html>
