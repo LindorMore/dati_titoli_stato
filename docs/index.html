@@ -68,11 +68,13 @@
     .inline-group {
       display: flex;
       align-items: center;
+      gap: 5px;
     }
 
     .inline-group label {
       font-weight: bold;
       margin-right: 5px;
+      white-space: nowrap;
     }
 
     select, input[type="text"], input[type="range"] {
@@ -209,6 +211,16 @@
           <select id="nazioneSelect" onchange="filterTable()">
             <option value="">Tutte</option>
           </select>
+          <!-- Nuovo filtro Mercato -->
+          <label for="mercatoSelect"><strong>Mercato:</strong></label>
+          <select id="mercatoSelect" onchange="filterTable()">
+            <option value="">Tutti</option>
+          </select>
+          <!-- Nuovo filtro Valuta -->
+          <label for="valutaSelect"><strong>Valuta:</strong></label>
+          <select id="valutaSelect" onchange="filterTable()">
+            <option value="">Tutte</option>
+          </select>
         </div>
       </div>
 
@@ -233,6 +245,8 @@
     let tableData = [];
     let originalData = [];
     let fullNazioneList = [];
+    let fullMercatoList = [];
+    let fullValutaList = [];
     let sortCol = -1;
     let sortAsc = true;
     let minMaxMap = {};
@@ -247,7 +261,6 @@
 
       const thead = document.querySelector("#btpTable thead");
       thead.innerHTML = "<tr>" + header.map((col, i) => {
-     
         const isSortable = i !== 0 && i !== 9 && i !== 10 && i !== header.length - 1;
         return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
       }).join("") + "</tr>";
@@ -255,6 +268,12 @@
       const nazioneIndex = header.length - 1;
       fullNazioneList = [...new Set(data.map(row => row[nazioneIndex]))].sort();
       populateSelect("nazioneSelect", fullNazioneList);
+
+      // Nuove liste uniche per Mercato (colonna 9) e Valuta (colonna 10)
+      fullMercatoList = [...new Set(data.map(row => row[9]))].sort();
+      fullValutaList = [...new Set(data.map(row => row[10]))].sort();
+      populateSelect("mercatoSelect", fullMercatoList);
+      populateSelect("valutaSelect", fullValutaList);
 
       createRangeFilters(header);
       renderTable(data);
@@ -293,6 +312,8 @@
       document.getElementById("isinSearch").value = "";
       document.getElementById("nazioneSearch").value = "";
       document.getElementById("nazioneSelect").value = "";
+      document.getElementById("mercatoSelect").value = "";
+      document.getElementById("valutaSelect").value = "";
       updateDropdown('nazioneSelect', '');
 
       const numericIndices = [1, 2, 3, 6, 7, 8];
@@ -318,86 +339,94 @@
 
     function updateDropdown(selectId, filterText) {
       filterText = filterText.toLowerCase();
-      const filtered = fullNazioneList.filter(n => n.toLowerCase().includes(filterText));
-      populateSelect(selectId, filtered);
-      document.getElementById(selectId).value = "";
+      const filteredOptions = fullNazioneList.filter(opt => opt.toLowerCase().includes(filterText));
+      const select = document.getElementById(selectId);
+      select.innerHTML = '<option value="">Tutte</option>';
+      filteredOptions.forEach(opt => {
+        select.innerHTML += `<option value="${opt}">${opt}</option>`;
+      });
+      select.value = "";
       filterTable();
     }
 
     function filterTable() {
-      const isinVal = document.getElementById("isinSearch").value.toUpperCase();
-      const nazioneVal = document.getElementById("nazioneSelect").value;
-      const numericIndices = [1, 2, 3, 6, 7, 8];
+      let filtered = originalData;
 
-      let filtered = originalData.filter(row => {
-        if (isinVal && !row[0].toUpperCase().includes(isinVal)) return false;
-        if (nazioneVal && row[row.length - 1] !== nazioneVal) return false;
-
-        for (const i of numericIndices) {
-          const min = parseFloat(document.getElementById(`min-${i}`).value);
-          const max = parseFloat(document.getElementById(`max-${i}`).value);
-          const val = parseFloat(row[i]);
-          if (isNaN(val) || val < min || val > max) return false;
-        }
-        return true;
-      });
-
-      if (sortCol >= 0) {
-        filtered.sort((a, b) => {
-          let valA = a[sortCol];
-          let valB = b[sortCol];
-
-          if (!isNaN(parseFloat(valA)) && !isNaN(parseFloat(valB))) {
-            valA = parseFloat(valA);
-            valB = parseFloat(valB);
-          } else {
-            valA = valA.toString();
-            valB = valB.toString();
-          }
-
-          if (valA < valB) return sortAsc ? -1 : 1;
-          if (valA > valB) return sortAsc ? 1 : -1;
-          return 0;
-        });
+      const isinFilter = document.getElementById("isinSearch").value.toLowerCase();
+      if (isinFilter) {
+        filtered = filtered.filter(row => row[0].toLowerCase().includes(isinFilter));
       }
+
+      const nazioneFilter = document.getElementById("nazioneSelect").value;
+      if (nazioneFilter) {
+        filtered = filtered.filter(row => row[row.length - 1] === nazioneFilter);
+      }
+
+      const mercatoFilter = document.getElementById("mercatoSelect").value;
+      if (mercatoFilter) {
+        filtered = filtered.filter(row => row[9] === mercatoFilter);
+      }
+
+      const valutaFilter = document.getElementById("valutaSelect").value;
+      if (valutaFilter) {
+        filtered = filtered.filter(row => row[10] === valutaFilter);
+      }
+
+      // Filtri range numerici
+      const numericIndices = [1, 2, 3, 6, 7, 8];
+      numericIndices.forEach(i => {
+        const min = parseFloat(document.getElementById(`min-${i}`).value);
+        const max = parseFloat(document.getElementById(`max-${i}`).value);
+        filtered = filtered.filter(row => {
+          const val = parseFloat(row[i]);
+          return !isNaN(val) && val >= min && val <= max;
+        });
+      });
 
       renderTable(filtered);
     }
 
     function renderTable(data) {
       const tbody = document.querySelector("#btpTable tbody");
-      tbody.innerHTML = data.map(row => {
-        return `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`;
-      }).join('');
+      tbody.innerHTML = "";
+      data.forEach(row => {
+        const tr = document.createElement("tr");
+        row.forEach(cell => {
+          const td = document.createElement("td");
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
       document.getElementById("resultCount").textContent = `Risultati mostrati: ${data.length}`;
     }
 
-    function sortTable(index) {
-      
-      if (index === 0 || index === 4 || index === 9 || index === 10 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
-
-      if (sortCol === index) {
+    function sortTable(colIndex) {
+      if (sortCol === colIndex) {
         sortAsc = !sortAsc;
       } else {
-        sortCol = index;
+        sortCol = colIndex;
         sortAsc = true;
       }
-
-      updateSortIcons();
-      filterTable();
-    }
-
-    function updateSortIcons() {
-      const headers = document.querySelectorAll("#btpTable thead th");
-      headers.forEach((th, i) => {
-        const icon = document.getElementById(`icon-${i}`);
-        if (!icon) return;
-        if (i === sortCol) {
-          icon.textContent = sortAsc ? '▲' : '▼';
-        } else {
-          icon.textContent = '⇅';
+      tableData.sort((a, b) => {
+        let valA = a[colIndex];
+        let valB = b[colIndex];
+        const numA = parseFloat(valA);
+        const numB = parseFloat(valB);
+        if (!isNaN(numA) && !isNaN(numB)) {
+          valA = numA;
+          valB = numB;
         }
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
       });
+      renderTable(tableData);
+
+      // Aggiorna icone freccia
+      document.querySelectorAll(".sort-icon").forEach(icon => icon.textContent = "⇅");
+      const icon = document.getElementById(`icon-${colIndex}`);
+      icon.textContent = sortAsc ? "▲" : "▼";
     }
 
     window.onload = loadCSV;
