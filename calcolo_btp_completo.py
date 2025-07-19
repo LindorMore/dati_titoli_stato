@@ -4,8 +4,9 @@ from dateutil.relativedelta import relativedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from github import Github
-import time
 import os
 
 # === CONFIG ===
@@ -21,12 +22,12 @@ options.add_argument("--headless")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 driver = webdriver.Chrome(options=options)
+wait = WebDriverWait(driver, 10)
 
-# === ESTRAZIONE DATI DA BORSA ITALIANA ===
+# === ESTRAZIONE DATI ===
 def estrai_dati(isin):
     url = f"https://www.borsaitaliana.it/borsa/obbligazioni/mot/btp/scheda/{isin}.html"
     driver.get(url)
-    time.sleep(7)
 
     try:
         # XPaths
@@ -39,9 +40,11 @@ def estrai_dati(isin):
 
         # Prezzo
         try:
-            prezzo = float(driver.find_element(By.XPATH, prezzo_live_xpath).text.replace(",", "."))
+            prezzo_element = wait.until(EC.presence_of_element_located((By.XPATH, prezzo_live_xpath)))
+            prezzo = float(prezzo_element.text.replace(",", "."))
         except:
-            prezzo = float(driver.find_element(By.XPATH, prezzo_chiusura_xpath).text.replace(",", "."))
+            prezzo_element = wait.until(EC.presence_of_element_located((By.XPATH, prezzo_chiusura_xpath)))
+            prezzo = float(prezzo_element.text.replace(",", "."))
 
         # Cedola
         try:
@@ -49,10 +52,12 @@ def estrai_dati(isin):
             cedola_semestrale = float(cedola_str)
         except:
             try:
-                cedola_annua_str = driver.find_element(By.XPATH, cedola_annua_xpath).text.strip().replace(",", ".").replace("%", "")
-                cedola_semestrale = float(cedola_annua_str) / 2
+                cedola_str = driver.find_element(By.XPATH, cedola_annua_xpath).text.strip().replace(",", ".").replace("%", "")
+                cedola_annua = float(cedola_str)
+                cedola_semestrale = cedola_annua / 2  # calcolo equivalente
             except:
-                raise Exception("Cedola non trovata (né semestrale né annua)")
+                print(f"❌ Errore per ISIN {isin}: Cedola non trovata (né semestrale né annua)")
+                return None, None, None, None
 
         # Scadenza
         scadenza_text = driver.find_element(By.XPATH, scadenza_xpath).text.strip()
@@ -92,7 +97,7 @@ def calcoli(isin, prezzo, cedola_semestrale, scadenza_data, nazione):
         nazione
     ]
 
-# === ESTRAZIONE E CALCOLO ===
+# === ESTRAZIONE + CALCOLI ===
 dati_finali = [["ISIN", "Prezzo", "Cedola Semestrale Lorda", "Cedola Annua Lorda %", "Data di Scadenza", "Mesi alla Scadenza", "Rendimento Totale Lordo %", "Rendimento lordo Annuo %", "Nazione"]]
 
 for isin in ISIN_LIST:
