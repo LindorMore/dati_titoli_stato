@@ -1,10 +1,12 @@
 import csv
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from github import Github
-import time
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 import os
 
 # === CONFIG ===
@@ -20,31 +22,23 @@ options.add_argument("--headless")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 driver = webdriver.Chrome(options=options)
-
-# Funzione per convertire mesi in anni e mesi con plurali corretti
-def mesi_in_anni_mesi(mesi):
-    anni = mesi // 12
-    mesi_residui = mesi % 12
-    parti = []
-    if anni > 0:
-        parti.append(f"{anni} anno" + ("i" if anni > 1 else ""))
-    if mesi_residui > 0:
-        parti.append(f"{mesi_residui} mese" + ("i" if mesi_residui > 1 else ""))
-    return " e ".join(parti) if parti else "0 mesi"
+wait = WebDriverWait(driver, 10)
 
 # === ESTRAZIONE DATI DA BORSA ITALIANA ===
 def estrai_dati(isin):
     url = f"https://www.borsaitaliana.it/borsa/obbligazioni/mot/btp/scheda/{isin}.html"
     driver.get(url)
-    time.sleep(7)
-
+    
     try:
+        # XPaths aggiornati
         prezzo_live_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[1]/article/div/div/div[2]/div/span[1]/strong'
         prezzo_chiusura_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[5]/article/div/div[2]/div[1]/table/tbody/tr[1]/td[2]/span'
         cedola_semestrale_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[9]/td[2]/span'
         cedola_annua_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[10]/td[2]/span'
         scadenza_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[5]/td[2]/span'
         nazione_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[1]/table/tbody/tr[2]/td[2]/span'
+        mercato_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[1]/table/tbody/tr[10]/td[2]/span'
+        valuta_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[1]/table/tbody/tr[9]/td[2]/span'
 
         # Prezzo: live o chiusura
         try:
@@ -52,19 +46,28 @@ def estrai_dati(isin):
         except:
             prezzo = float(driver.find_element(By.XPATH, prezzo_chiusura_xpath).text.replace(",", "."))
 
-        # Cedola semestrale o annua
+        # Cedola: prima semestrale, se non c’è annua
+        cedola_testo = ""
+        cedola_semestrale = None
+        cedola_annua = None
+        
         try:
-            cedola_str = driver.find_element(By.XPATH, cedola_semestrale_xpath).text.strip().replace(",", ".").replace("%", "")
-            cedola = float(cedola_str)
-            cedola_tipo = "semestrale"
+            cedola_testo = driver.find_element(By.XPATH, cedola_semestrale_xpath).text.strip()
+            if cedola_testo != "":
+                cedola_semestrale = float(cedola_testo.replace(",", ".").replace("%", ""))
         except:
+            pass
+        
+        if cedola_semestrale is None:
             try:
-                cedola_str = driver.find_element(By.XPATH, cedola_annua_xpath).text.strip().replace(",", ".").replace("%", "")
-                cedola = float(cedola_str)
-                cedola_tipo = "annua"
+                cedola_testo = driver.find_element(By.XPATH, cedola_annua_xpath).text.strip()
+                if cedola_testo != "":
+                    cedola_annua = float(cedola_testo.replace(",", ".").replace("%", ""))
             except:
-                print(f"❌ Errore per ISIN {isin}: Cedola non trovata (né semestrale né annua)")
-                return None, None, None, None, None
+                pass
+        
+        if cedola_semestrale is None and cedola_annua is None:
+            raise Exception("Cedola non trovata (né semestrale né annua)")
 
         # Scadenza
         scadenza_text = driver.find_element(By.XPATH, scadenza_xpath).text.strip()
@@ -76,48 +79,75 @@ def estrai_dati(isin):
         # Nazione
         nazione = driver.find_element(By.XPATH, nazione_xpath).text.strip()
 
-        return prezzo, cedola, cedola_tipo, scadenza_data, nazione
+        # Mercato
+        mercato = driver.find_element(By.XPATH, mercato_xpath).text.strip()
+
+        # Valuta
+        valuta = driver.find_element(By.XPATH, valuta_xpath).text.strip()
+
+        return prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazione, mercato, valuta
 
     except Exception as e:
         print(f"❌ Errore per ISIN {isin}: {e}")
-        return None, None, None, None, None
+        return None, None, None, None, None, None, None
 
 # === CALCOLI ===
-def calcoli(isin, prezzo, cedola, cedola_tipo, scadenza_data, nazione):
+def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazione, mercato, valuta):
     oggi = datetime.now()
     mesi_alla_scadenza = (scadenza_data.year - oggi.year) * 12 + scadenza_data.month - oggi.month
-    n_cedole = mesi_alla_scadenza // 6 if cedola_tipo == "semestrale" else mesi_alla_scadenza // 12
-    totale_cedole = cedola * n_cedole
+    n_cedole = mesi_alla_scadenza // 6
+    # Se cedola semestrale presente, calcoli con quella, altrimenti con quella annua
+    if cedola_semestrale is not None:
+        totale_cedole = cedola_semestrale * n_cedole
+        cedola_tipo = "Semestrale"
+        cedola_annua_su_prezzo = (cedola_semestrale * 2 / prezzo) * 100
+    else:
+        totale_cedole = cedola_annua
+        cedola_tipo = "Annua"
+        cedola_annua_su_prezzo = (cedola_annua / prezzo) * 100
+
     rendimento_totale = ((totale_cedole + 100 - prezzo) / prezzo) * 100
     anni_alla_scadenza = mesi_alla_scadenza / 12
     rendimento_annuo = rendimento_totale / anni_alla_scadenza if anni_alla_scadenza > 0 else 0
 
-    if cedola_tipo == "semestrale":
-        cedola_annua_su_prezzo = (cedola * 2 / prezzo) * 100
-    else:
-        cedola_annua_su_prezzo = (cedola / prezzo) * 100
+    anni = mesi_alla_scadenza // 12
+    mesi = mesi_alla_scadenza % 12
+    durata_str = ""
+    if anni > 0:
+        durata_str += f"{anni} anni"
+    if mesi > 0:
+        durata_str += f" e {mesi} mesi"
+    if durata_str == "":
+        durata_str = "0 mesi"
 
     return [
         isin,
         round(prezzo, 2),
-        round(cedola, 2),
-        cedola_tipo,
+        round(cedola_semestrale if cedola_semestrale is not None else 0, 2),
+        round(cedola_annua if cedola_annua is not None else 0, 2),
         round(cedola_annua_su_prezzo, 2),
+        cedola_tipo,
         scadenza_data.strftime("%d/%m/%Y"),
-        mesi_in_anni_mesi(mesi_alla_scadenza),
+        durata_str,
         round(rendimento_totale, 2),
         round(rendimento_annuo, 2),
-        nazione
+        nazione,
+        mercato,
+        valuta
     ]
 
 # === ESTRAZIONE E CALCOLO ===
-dati_finali = [["ISIN", "Prezzo", "Cedola Lorda", "Tipo Cedola", "Cedola Annua Lorda %", "Data di Scadenza", "Scadenza (anni e mesi)", "Rendimento Totale Lordo %", "Rendimento lordo Annuo %", "Nazione"]]
+dati_finali = [[
+    "ISIN", "Prezzo", "Cedola Semestrale Lorda", "Cedola Annua Lorda", "Cedola Annua Lorda %", "Tipo Cedola",
+    "Data di Scadenza", "Durata (anni e mesi)", "Rendimento Totale Lordo %", "Rendimento lordo Annuo %",
+    "Nazione", "Mercato", "Valuta"
+]]
 
 for isin in ISIN_LIST:
     print(f"🔎 Elaborazione {isin}...")
-    prezzo, cedola, cedola_tipo, scadenza, nazione = estrai_dati(isin)
+    prezzo, cedola_semestrale, cedola_annua, scadenza, nazione, mercato, valuta = estrai_dati(isin)
     if prezzo is not None:
-        dati_finali.append(calcoli(isin, prezzo, cedola, cedola_tipo, scadenza, nazione))
+        dati_finali.append(calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza, nazione, mercato, valuta))
 
 driver.quit()
 
