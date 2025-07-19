@@ -30,7 +30,6 @@ def estrai_dati(isin):
     driver.get(url)
     
     try:
-        # XPaths aggiornati
         prezzo_live_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[1]/article/div/div/div[2]/div/span[1]/strong'
         prezzo_chiusura_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[5]/article/div/div[2]/div[1]/table/tbody/tr[1]/td[2]/span'
         cedola_semestrale_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[9]/td[2]/span'
@@ -40,14 +39,11 @@ def estrai_dati(isin):
         mercato_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[1]/table/tbody/tr[10]/td[2]/span'
         valuta_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[1]/table/tbody/tr[9]/td[2]/span'
 
-        # Prezzo: live o chiusura
         try:
             prezzo = float(driver.find_element(By.XPATH, prezzo_live_xpath).text.replace(",", "."))
         except:
             prezzo = float(driver.find_element(By.XPATH, prezzo_chiusura_xpath).text.replace(",", "."))
 
-        # Cedola: prima semestrale, se non c’è annua
-        cedola_testo = ""
         cedola_semestrale = None
         cedola_annua = None
         
@@ -69,20 +65,14 @@ def estrai_dati(isin):
         if cedola_semestrale is None and cedola_annua is None:
             raise Exception("Cedola non trovata (né semestrale né annua)")
 
-        # Scadenza
         scadenza_text = driver.find_element(By.XPATH, scadenza_xpath).text.strip()
         if len(scadenza_text.split("/")[-1]) == 2:
             scadenza_data = datetime.strptime(scadenza_text, "%d/%m/%y")
         else:
             scadenza_data = datetime.strptime(scadenza_text, "%d/%m/%Y")
 
-        # Nazione
         nazione = driver.find_element(By.XPATH, nazione_xpath).text.strip()
-
-        # Mercato
         mercato = driver.find_element(By.XPATH, mercato_xpath).text.strip()
-
-        # Valuta
         valuta = driver.find_element(By.XPATH, valuta_xpath).text.strip()
 
         return prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazione, mercato, valuta
@@ -96,7 +86,6 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
     oggi = datetime.now()
     mesi_alla_scadenza = (scadenza_data.year - oggi.year) * 12 + scadenza_data.month - oggi.month
     n_cedole = mesi_alla_scadenza // 6
-    # Se cedola semestrale presente, calcoli con quella, altrimenti con quella annua
     if cedola_semestrale is not None:
         totale_cedole = cedola_semestrale * n_cedole
         cedola_tipo = "Semestrale"
@@ -124,7 +113,6 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
         isin,
         round(prezzo, 2),
         round(cedola_semestrale if cedola_semestrale is not None else 0, 2),
-        round(cedola_annua if cedola_annua is not None else 0, 2),
         round(cedola_annua_su_prezzo, 2),
         cedola_tipo,
         scadenza_data.strftime("%d/%m/%Y"),
@@ -138,7 +126,7 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
 
 # === ESTRAZIONE E CALCOLO ===
 dati_finali = [[
-    "ISIN", "Prezzo", "Cedola Semestrale Lorda", "Cedola Annua Lorda", "Cedola Annua Lorda %", "Tipo Cedola",
+    "ISIN", "Prezzo", "Cedola Semestrale Lorda", "Cedola Annua Lorda %", "Tipo Cedola",
     "Data di Scadenza", "Durata (anni e mesi)", "Rendimento Totale Lordo %", "Rendimento lordo Annuo %",
     "Nazione", "Mercato", "Valuta"
 ]]
