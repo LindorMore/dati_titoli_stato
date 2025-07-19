@@ -374,7 +374,7 @@
 
     function sortTable(index) {
       // Disabilita ordinamento su colonne 0, 8, 9 e ultima colonna
-      if (index === 0 || index === 9 || index === 10 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
+      if (index === 0 || index === 4 || index === 9 || index === 10 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
 
       if (sortCol === index) {
         sortAsc = !sortAsc;
