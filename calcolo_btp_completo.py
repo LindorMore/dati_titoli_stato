@@ -4,13 +4,12 @@ from dateutil.relativedelta import relativedelta
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from github import Github
+import time
 import os
 
 # === CONFIG ===
-ISIN_LIST = ["XS2571924070", "XS1837994794", "US900123BB58", "XS2201851685", "US77586TAE64", "IT0005484552"]
+ISIN_LIST = ["XS2571924070", "XS1837994794", "US900123BB58", "XS2201851685", "US77586TAE64","IT0005484552"]
 CSV_FILE = "dati_btp.csv"
 GITHUB_TOKEN = os.environ["MY_GITHUB_TOKEN"]
 REPO_NAME = "LindorMore/dati_titoli_stato"
@@ -22,15 +21,14 @@ options.add_argument("--headless")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 driver = webdriver.Chrome(options=options)
-wait = WebDriverWait(driver, 10)
 
-# === ESTRAZIONE DATI ===
+# === ESTRAZIONE DATI DA BORSA ITALIANA ===
 def estrai_dati(isin):
     url = f"https://www.borsaitaliana.it/borsa/obbligazioni/mot/btp/scheda/{isin}.html"
     driver.get(url)
+    time.sleep(7)  # Puoi ottimizzare con WebDriverWait, ma per ora lasciamo così
 
     try:
-        # XPaths
         prezzo_live_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[1]/article/div/div/div[2]/div/span[1]/strong'
         prezzo_chiusura_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[5]/article/div/div[2]/div[1]/table/tbody/tr[1]/td[2]/span'
         cedola_semestrale_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[9]/td[2]/span'
@@ -38,26 +36,26 @@ def estrai_dati(isin):
         scadenza_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[2]/table/tbody/tr[5]/td[2]/span'
         nazione_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[8]/div/article/div/div[2]/div[1]/table/tbody/tr[2]/td[2]/span'
 
-        # Prezzo
+        # Prezzo: live o chiusura
         try:
-            prezzo_element = wait.until(EC.presence_of_element_located((By.XPATH, prezzo_live_xpath)))
-            prezzo = float(prezzo_element.text.replace(",", "."))
+            prezzo = float(driver.find_element(By.XPATH, prezzo_live_xpath).text.replace(",", "."))
         except:
-            prezzo_element = wait.until(EC.presence_of_element_located((By.XPATH, prezzo_chiusura_xpath)))
-            prezzo = float(prezzo_element.text.replace(",", "."))
+            prezzo = float(driver.find_element(By.XPATH, prezzo_chiusura_xpath).text.replace(",", "."))
 
-        # Cedola
+        # Cedola: prova prima semestrale, se non c'è prova annua
         try:
             cedola_str = driver.find_element(By.XPATH, cedola_semestrale_xpath).text.strip().replace(",", ".").replace("%", "")
             cedola_semestrale = float(cedola_str)
+            tipo_cedola = "Semestrale"
         except:
             try:
                 cedola_str = driver.find_element(By.XPATH, cedola_annua_xpath).text.strip().replace(",", ".").replace("%", "")
                 cedola_annua = float(cedola_str)
-                cedola_semestrale = cedola_annua / 2  # calcolo equivalente
+                cedola_semestrale = cedola_annua / 2  # trasformo annua in semestrale per i calcoli
+                tipo_cedola = "Annua"
             except:
                 print(f"❌ Errore per ISIN {isin}: Cedola non trovata (né semestrale né annua)")
-                return None, None, None, None
+                return None, None, None, None, None
 
         # Scadenza
         scadenza_text = driver.find_element(By.XPATH, scadenza_xpath).text.strip()
@@ -69,11 +67,11 @@ def estrai_dati(isin):
         # Nazione
         nazione = driver.find_element(By.XPATH, nazione_xpath).text.strip()
 
-        return prezzo, cedola_semestrale, scadenza_data, nazione
+        return prezzo, cedola_semestrale, scadenza_data, nazione, tipo_cedola
 
     except Exception as e:
         print(f"❌ Errore per ISIN {isin}: {e}")
-        return None, None, None, None
+        return None, None, None, None, None
 
 # === CALCOLI ===
 def calcoli(isin, prezzo, cedola_semestrale, scadenza_data, nazione):
@@ -97,14 +95,14 @@ def calcoli(isin, prezzo, cedola_semestrale, scadenza_data, nazione):
         nazione
     ]
 
-# === ESTRAZIONE + CALCOLI ===
-dati_finali = [["ISIN", "Prezzo", "Cedola Semestrale Lorda", "Cedola Annua Lorda %", "Data di Scadenza", "Mesi alla Scadenza", "Rendimento Totale Lordo %", "Rendimento lordo Annuo %", "Nazione"]]
+# === ESTRAZIONE E CALCOLO ===
+dati_finali = [["ISIN", "Prezzo", "Cedola Semestrale Lorda", "Cedola Annua Lorda %", "Data di Scadenza", "Mesi alla Scadenza", "Rendimento Totale Lordo %", "Rendimento lordo Annuo %", "Nazione", "Tipo Cedola"]]
 
 for isin in ISIN_LIST:
     print(f"🔎 Elaborazione {isin}...")
-    prezzo, cedola_semestrale, scadenza, nazione = estrai_dati(isin)
+    prezzo, cedola_semestrale, scadenza, nazione, tipo_cedola = estrai_dati(isin)
     if prezzo is not None:
-        dati_finali.append(calcoli(isin, prezzo, cedola_semestrale, scadenza, nazione))
+        dati_finali.append(calcoli(isin, prezzo, cedola_semestrale, scadenza, nazione) + [tipo_cedola])
 
 driver.quit()
 
@@ -127,4 +125,3 @@ with open(CSV_FILE, "r") as f:
     except:
         repo.create_file(CSV_FILE, COMMIT_MESSAGE, contenuto)
         print("🆕 File caricato su GitHub.")
-
