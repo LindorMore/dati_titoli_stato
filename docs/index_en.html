@@ -242,6 +242,29 @@
   </div>
 
   <script>
+    // Dictionaries for translating specific columns' content to English
+    const translationCountry = {
+      "Italia": "Italy",
+      "Francia": "France",
+      "Germania": "Germany",
+      "Spagna": "Spain",
+      // aggiungi altri se necessario
+    };
+
+    const translationMarket = {
+      "MOT": "MOT",
+      "EuroTLX": "EuroTLX",
+      "ExtraMOT": "ExtraMOT",
+      // aggiungi altri se necessario
+    };
+
+    const translationCurrency = {
+      "Euro": "Euro",
+      "USD": "USD",
+      "CHF": "CHF",
+      // aggiungi altri se necessario
+    };
+
     let tableData = [];
     let originalData = [];
     let fullNazioneList = [];
@@ -259,45 +282,81 @@
       tableData = data;
       originalData = [...data];
 
+      // Translate headers here:
+      const translatedHeaders = [
+        "ISIN",
+        "Price",
+        "Gross Yield (%)",
+        "Net Yield (%)",
+        "Coupon",
+        "Last Coupon Date",
+        "Maturity Date",
+        "Days to Maturity",
+        "Duration",
+        "Market",
+        "Currency",
+        "Country"
+      ];
+
       const thead = document.querySelector("#btpTable thead");
-      thead.innerHTML = "<tr>" + header.map((col, i) => {
-        const isSortable = i !== 0 && i !== 4 && i !== 9 && i !== 10 && i !== header.length - 1;
-        return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
+      thead.innerHTML = "<tr>" + translatedHeaders.map((col, i) => {
+        // sortable same columns as original
+        return `<th onclick="sortTable(${i})">${col} <span class="sort-icon" id="icon-${i}">⇅</span></th>`;
       }).join("") + "</tr>";
 
-      const nazioneIndex = header.length - 1;
-      fullNazioneList = [...new Set(data.map(row => row[nazioneIndex]))].sort();
-      populateSelect("nazioneSelect", fullNazioneList);
-
-      // New unique lists for Market (column 9) and Currency (column 10)
+      // Populate dropdowns and find min/max for range filters
+      fullNazioneList = [...new Set(data.map(row => row[row.length - 1]))].sort();
       fullMercatoList = [...new Set(data.map(row => row[9]))].sort();
       fullValutaList = [...new Set(data.map(row => row[10]))].sort();
+
+      populateSelect("nazioneSelect", fullNazioneList);
       populateSelect("mercatoSelect", fullMercatoList);
       populateSelect("valutaSelect", fullValutaList);
 
-      createRangeFilters(header);
-      renderTable(data);
-    }
+      // Calculate min and max for numeric range filters
+      // columns index for numeric ranges: 1, 2, 3, 6, 7, 8
+      // For 'Last Coupon Date' (index 5) and 'Maturity Date' (index 6) we leave them as strings, so skip 5, include 6 as days to maturity numeric
 
-    function createRangeFilters(header) {
-      const container = document.getElementById("rangeFilters");
-      container.innerHTML = "";
-      const numericIndices = [1, 2, 3, 6, 7, 8];
-      numericIndices.forEach((i) => {
-        const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
-        const minVal = Math.floor(Math.min(...values));
-        const maxVal = Math.ceil(Math.max(...values));
-        minMaxMap[i] = { min: minVal, max: maxVal };
-        const div = document.createElement("div");
-        div.className = "range-group";
-        div.innerHTML = `
-          <label><strong>${header[i]}</strong></label>
-          <div class="range-values">Min: <span id="val-min-${i}">${minVal}</span> - Max: <span id="val-max-${i}">${maxVal}</span></div>
-          <input type="range" id="min-${i}" min="${minVal}" max="${maxVal}" value="${minVal}" oninput="updateRange(${i})">
-          <input type="range" id="max-${i}" min="${minVal}" max="${maxVal}" value="${maxVal}" oninput="updateRange(${i})">
-        `;
-        container.appendChild(div);
+      const numericIndices = [1, 2, 3, 7, 8]; // excluding index 6 "Maturity Date" which is a date string; index 7 is days to maturity
+      minMaxMap = {};
+      numericIndices.forEach(i => {
+        let colValues = data.map(row => parseFloat(row[i])).filter(val => !isNaN(val));
+        if (colValues.length) {
+          minMaxMap[i] = {
+            min: Math.floor(Math.min(...colValues)),
+            max: Math.ceil(Math.max(...colValues))
+          };
+        } else {
+          minMaxMap[i] = {min: 0, max: 100};
+        }
       });
+
+      // Add range filters with English labels:
+      // Map col index to label:
+      const rangeLabels = {
+        1: "Price",
+        2: "Gross Yield (%)",
+        3: "Net Yield (%)",
+        7: "Days to Maturity",
+        8: "Duration"
+      };
+
+      const rangeFiltersContainer = document.getElementById("rangeFilters");
+      rangeFiltersContainer.innerHTML = "";
+      for (const i in minMaxMap) {
+        rangeFiltersContainer.innerHTML += `
+          <div class="range-group">
+            <label><strong>${rangeLabels[i]}</strong></label>
+            <div class="range-values">
+              <span id="val-min-${i}">${minMaxMap[i].min}</span>
+              <input type="range" id="min-${i}" min="${minMaxMap[i].min}" max="${minMaxMap[i].max}" value="${minMaxMap[i].min}" onchange="updateRange(${i})" oninput="updateRange(${i})" />
+              <input type="range" id="max-${i}" min="${minMaxMap[i].min}" max="${minMaxMap[i].max}" value="${minMaxMap[i].max}" onchange="updateRange(${i})" oninput="updateRange(${i})" />
+              <span id="val-max-${i}">${minMaxMap[i].max}</span>
+            </div>
+          </div>`;
+      }
+
+      renderTable(tableData);
     }
 
     function updateRange(index) {
@@ -352,7 +411,7 @@
         const valutaMatch = valutaFilter === "" || row[10] === valutaFilter;
 
         // Numeric ranges
-        const numericIndices = [1, 2, 3, 6, 7, 8];
+        const numericIndices = [1, 2, 3, 7, 8];
         let numericMatch = true;
         for (const i of numericIndices) {
           const val = parseFloat(row[i]);
@@ -378,7 +437,24 @@
       tbody.innerHTML = "";
       data.forEach(row => {
         const tr = document.createElement("tr");
-        row.forEach(cell => {
+
+        // Translate country, market, currency cells before adding
+        let newRow = [...row];
+        // Country (last column)
+        const countryIndex = newRow.length - 1;
+        if (translationCountry[newRow[countryIndex]]) {
+          newRow[countryIndex] = translationCountry[newRow[countryIndex]];
+        }
+        // Market index 9
+        if (translationMarket[newRow[9]]) {
+          newRow[9] = translationMarket[newRow[9]];
+        }
+        // Currency index 10
+        if (translationCurrency[newRow[10]]) {
+          newRow[10] = translationCurrency[newRow[10]];
+        }
+
+        newRow.forEach(cell => {
           const td = document.createElement("td");
           td.textContent = cell;
           tr.appendChild(td);
