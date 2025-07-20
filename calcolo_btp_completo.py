@@ -103,11 +103,11 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
     mesi = mesi_alla_scadenza % 12
     durata_str = ""
     if anni > 0:
-        durata_str += f"{anni} anni"
+        durata_str += f"{anni}"
     if mesi > 0:
-        durata_str += f" e {mesi} mesi"
+        durata_str += f" {mesi}"
     if durata_str == "":
-        durata_str = "0 mesi"
+        durata_str = "0"
 
     return [
         isin,
