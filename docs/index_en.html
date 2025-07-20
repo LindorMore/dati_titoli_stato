@@ -280,6 +280,29 @@
           default: return col;
         }
       });
+      function translateCellContent(header, value) {
+  if (header === "Country") {
+    switch (value.trim()) {
+      case "Italia": return "Italy";
+      case "Germania": return "Germany";
+      case "Francia": return "France";
+      case "Spagna": return "Spain";
+      default: return value;
+    }
+  }
+
+  if (header === "Type Coupon") {
+    switch (value.trim()) {
+      case "Annua": return "Annual";
+      case "Semestrale": return "Semi-annual";
+    
+      default: return value;
+    }
+  }
+
+  return value;
+}
+
 
       thead.innerHTML = "<tr>" + translatedHeaders.map((col, i) => {
         const isSortable = i !== 0 && i !== 4 && i !== 9 && i !== 10 && i !== header.length - 1;
