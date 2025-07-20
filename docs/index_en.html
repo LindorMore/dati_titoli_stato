@@ -34,7 +34,6 @@
       margin-left: 5px;
       object-fit: cover;
       vertical-align: middle;
-      cursor: pointer;
     }
 
     .filter-section-wrapper {
@@ -186,11 +185,11 @@
 
   <div class="language-selector">
     <span>Language</span>
-    <img src="https://flagcdn.com/w20/gb.png" alt="English" title="English" onclick="changeLanguage('en')">
-    <img src="https://flagcdn.com/w20/fr.png" alt="French" title="French" onclick="changeLanguage('fr')">
-    <img src="https://flagcdn.com/w20/de.png" alt="German" title="German" onclick="changeLanguage('de')">
-    <img src="https://flagcdn.com/w20/es.png" alt="Spanish" title="Spanish" onclick="changeLanguage('es')">
-    <img src="https://flagcdn.com/w20/it.png" alt="Italian" title="Italian" onclick="changeLanguage('it')">
+    <img src="https://flagcdn.com/w20/gb.png" alt="English" title="English">
+    <img src="https://flagcdn.com/w20/fr.png" alt="Français" title="Français">
+    <img src="https://flagcdn.com/w20/de.png" alt="Deutsch" title="Deutsch">
+    <img src="https://flagcdn.com/w20/es.png" alt="Español" title="Español">
+    <img src="https://flagcdn.com/w20/it.png" alt="Italiano" title="Italiano">
   </div>
 
   <div class="filter-info-mobile">Scroll to view filters</div>
@@ -203,9 +202,9 @@
 
       <div class="filter-group">
         <div class="inline-group">
-          <label for="countrySearch">Search Country:</label>
-          <input type="text" id="countrySearch" placeholder="Country" onkeyup="updateDropdown('countrySelect', this.value)">
-          <select id="countrySelect" onchange="filterTable()">
+          <label for="nazioneSearch">Search Country:</label>
+          <input type="text" id="nazioneSearch" placeholder="Country" onkeyup="updateDropdown('nazioneSelect', this.value)">
+          <select id="nazioneSelect" onchange="filterTable()">
             <option value="">All</option>
           </select>
         </div>
@@ -222,7 +221,7 @@
   <div class="result-count" id="resultCount">Results shown: 0</div>
 
   <div class="table-container">
-    <table id="bondTable">
+    <table id="btpTable">
       <thead></thead>
       <tbody></tbody>
     </table>
@@ -231,7 +230,7 @@
   <script>
     let tableData = [];
     let originalData = [];
-    let fullCountryList = [];
+    let fullNazioneList = [];
     let sortCol = -1;
     let sortAsc = true;
     let minMaxMap = {};
@@ -244,15 +243,15 @@
       tableData = data;
       originalData = [...data];
 
-      const thead = document.querySelector("#bondTable thead");
+      const thead = document.querySelector("#btpTable thead");
       thead.innerHTML = "<tr>" + header.map((col, i) => {
         const isSortable = i !== 0 && i !== header.length - 1;
         return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
       }).join("") + "</tr>";
 
-      const countryIndex = header.length - 1;
-      fullCountryList = [...new Set(data.map(row => row[countryIndex]))].sort();
-      populateSelect("countrySelect", fullCountryList);
+      const nazioneIndex = header.length - 1;
+      fullNazioneList = [...new Set(data.map(row => row[nazioneIndex]))].sort();
+      populateSelect("nazioneSelect", fullNazioneList);
 
       createRangeFilters(header);
       renderTable(data);
@@ -261,7 +260,7 @@
     function createRangeFilters(header) {
       const container = document.getElementById("rangeFilters");
       container.innerHTML = "";
-      const numericIndices = [1, 2, 3, 5, 6, 7]; // Adjust if your CSV columns change
+      const numericIndices = [1, 2, 3, 5, 6, 7];
       numericIndices.forEach((i) => {
         const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
         const minVal = Math.floor(Math.min(...values));
@@ -289,9 +288,9 @@
 
     function resetFilters() {
       document.getElementById("isinSearch").value = "";
-      document.getElementById("countrySearch").value = "";
-      document.getElementById("countrySelect").value = "";
-      updateDropdown('countrySelect', '');
+      document.getElementById("nazioneSearch").value = "";
+      document.getElementById("nazioneSelect").value = "";
+      updateDropdown('nazioneSelect', '');
 
       const numericIndices = [1, 2, 3, 5, 6, 7];
       numericIndices.forEach(i => {
@@ -318,84 +317,70 @@
     }
 
     function updateDropdown(id, searchValue) {
-      const list = fullCountryList;
+      const list = fullNazioneList;
       const filtered = list.filter(v => v.toLowerCase().includes(searchValue.toLowerCase()));
       populateSelect(id, filtered);
     }
 
     function renderTable(data) {
-      const tbody = document.querySelector("#bondTable tbody");
-      tbody.innerHTML = data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("");
-      document.getElementById("resultCount").textContent = "Results shown: " + data.length;
+      const tbody = document.querySelector("#btpTable tbody");
+      tbody.innerHTML = "";
+      data.forEach(row => {
+        const tr = document.createElement("tr");
+        row.forEach(cell => {
+          const td = document.createElement("td");
+          td.textContent = cell;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      document.getElementById("resultCount").textContent = `Results shown: ${data.length}`;
     }
 
     function filterTable() {
-      const isinVal = document.getElementById("isinSearch").value.toLowerCase().trim();
-      const countryVal = document.getElementById("countrySelect").value;
-      const countryIndex = document.querySelector("#bondTable thead tr").children.length - 1;
-      let filtered = [...originalData];
-      if (isinVal) filtered = filtered.filter(row => row[0].toLowerCase().trim().includes(isinVal));
-      if (countryVal) filtered = filtered.filter(row => row[countryIndex] === countryVal);
+      const isinFilter = document.getElementById("isinSearch").value.toLowerCase();
+      const nazioneFilter = document.getElementById("nazioneSelect").value.toLowerCase();
 
       const numericIndices = [1, 2, 3, 5, 6, 7];
-      numericIndices.forEach(i => {
-        const min = parseFloat(document.getElementById(`min-${i}`).value);
-        const max = parseFloat(document.getElementById(`max-${i}`).value);
-        filtered = filtered.filter(row => {
+      const rangeFilters = numericIndices.map(i => ({
+        min: parseFloat(document.getElementById(`min-${i}`).value),
+        max: parseFloat(document.getElementById(`max-${i}`).value)
+      }));
+
+      tableData = originalData.filter(row => {
+        const isinMatch = row[0].toLowerCase().includes(isinFilter);
+        const nazioneMatch = nazioneFilter === "" || row[row.length - 1].toLowerCase() === nazioneFilter;
+        const rangesMatch = numericIndices.every((i, idx) => {
           const val = parseFloat(row[i]);
-          return val >= min && val <= max;
+          return !isNaN(val) && val >= rangeFilters[idx].min && val <= rangeFilters[idx].max;
         });
-      });
-
-      tableData = filtered;
-      if (sortCol >= 0) sortTable(sortCol, true);
-      else renderTable(filtered);
-    }
-
-    function sortTable(colIndex, keepOrder = false) {
-      if (!keepOrder) {
-        if (sortCol === colIndex) sortAsc = !sortAsc;
-        else {
-          sortCol = colIndex;
-          sortAsc = true;
-        }
-      }
-      const iconEls = document.querySelectorAll(".sort-icon");
-      iconEls.forEach(icon => (icon.textContent = "⇅"));
-      document.getElementById(`icon-${colIndex}`).textContent = sortAsc ? "▲" : "▼";
-
-      tableData.sort((a, b) => {
-        const valA = a[colIndex];
-        const valB = b[colIndex];
-
-        // Numeric or string comparison
-        const numA = parseFloat(valA);
-        const numB = parseFloat(valB);
-
-        if (!isNaN(numA) && !isNaN(numB)) {
-          return sortAsc ? numA - numB : numB - numA;
-        } else {
-          if (valA < valB) return sortAsc ? -1 : 1;
-          if (valA > valB) return sortAsc ? 1 : -1;
-          return 0;
-        }
+        return isinMatch && nazioneMatch && rangesMatch;
       });
       renderTable(tableData);
     }
 
-    // Language switching redirects to the appropriate URL (adjust URLs as needed)
-    function changeLanguage(lang) {
-      const baseUrl = window.location.origin + window.location.pathname;
-      // Assuming your files are named index_en.html, index_fr.html, etc.
-      let newUrl = baseUrl.replace(/index_[a-z]{2}\.html$/, `index_${lang}.html`);
-      if (newUrl === baseUrl) {
-        // fallback if no language suffix in current url:
-        newUrl = baseUrl.replace(/\.html$/, `_` + lang + `.html`);
+    function sortTable(colIndex) {
+      if (sortCol === colIndex) {
+        sortAsc = !sortAsc;
+      } else {
+        sortCol = colIndex;
+        sortAsc = true;
       }
-      window.location.href = newUrl;
+
+      tableData.sort((a, b) => {
+        const valA = isNaN(a[colIndex]) ? a[colIndex].toLowerCase() : parseFloat(a[colIndex]);
+        const valB = isNaN(b[colIndex]) ? b[colIndex].toLowerCase() : parseFloat(b[colIndex]);
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
+      });
+
+      document.querySelectorAll("th .sort-icon").forEach(el => el.textContent = "⇅");
+      document.getElementById(`icon-${colIndex}`).textContent = sortAsc ? "↑" : "↓";
+
+      renderTable(tableData);
     }
 
-    // Initialize on load
     window.onload = loadCSV;
   </script>
 </body>
