@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
-  <title>Government Bonds Yields</title>
+  <title>Government Bond Yields</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -34,6 +34,7 @@
       margin-left: 5px;
       object-fit: cover;
       vertical-align: middle;
+      cursor: pointer;
     }
 
     .filter-section-wrapper {
@@ -119,12 +120,6 @@
       margin: 10px 0;
     }
 
-    .reset-wrapper-top {
-      text-align: right;
-      margin-top: 10px;
-      margin-bottom: -10px;
-    }
-
     table {
       width: 100%;
       border-collapse: collapse;
@@ -165,65 +160,69 @@
         overflow-x: auto;
       }
 
-      .reset-wrapper-top {
-        text-align: center;
-        margin-bottom: 0;
+      #resetButton {
+        display: block;
+        margin-left: auto;
+        margin-right: 0;
       }
 
-      .language-selector {
-        position: static;
-        text-align: center;
-        margin-top: 10px;
-        margin-bottom: 10px;
+      .reset-wrapper {
+        text-align: right;
+        margin-top: -10px;
+      }
+    }
+
+    @media (min-width: 769px) {
+      .reset-wrapper {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
       }
     }
   </style>
 </head>
 <body>
-  <h1>Government Bonds Yields</h1>
+  <h1>Government Bond Yields</h1>
 
   <div class="language-selector">
     <span>Language</span>
-    <img src="https://flagcdn.com/w20/gb.png" alt="English" title="English">
-    <img src="https://flagcdn.com/w20/fr.png" alt="Français" title="Français">
-    <img src="https://flagcdn.com/w20/de.png" alt="Deutsch" title="Deutsch">
-    <img src="https://flagcdn.com/w20/es.png" alt="Español" title="Español">
-    <img src="https://flagcdn.com/w20/it.png" alt="Italiano" title="Italiano">
+    <img src="https://flagcdn.com/w20/gb.png" alt="English" title="English" onclick="changeLanguage('en')">
+    <img src="https://flagcdn.com/w20/fr.png" alt="French" title="French" onclick="changeLanguage('fr')">
+    <img src="https://flagcdn.com/w20/de.png" alt="German" title="German" onclick="changeLanguage('de')">
+    <img src="https://flagcdn.com/w20/es.png" alt="Spanish" title="Spanish" onclick="changeLanguage('es')">
+    <img src="https://flagcdn.com/w20/it.png" alt="Italian" title="Italian" onclick="changeLanguage('it')">
   </div>
 
-  <div class="filter-info-mobile">Scroll to see filters</div>
+  <div class="filter-info-mobile">Scroll to view filters</div>
   <div class="filter-section-wrapper">
     <div class="filter-container" id="filterContainer">
-
       <div class="filter-group">
-        <div class="inline-group">
-          <label for="isinSearch"><strong>Search ISIN:</strong></label>
-          <input type="text" id="isinSearch" placeholder="Search ISIN" onkeyup="filterTable()">
-        </div>
+        <label for="isinSearch">Search ISIN:</label>
+        <input type="text" id="isinSearch" placeholder="Search ISIN" onkeyup="filterTable()">
       </div>
 
       <div class="filter-group">
         <div class="inline-group">
-          <label for="nazioneSearch"><strong>Search Country:</strong></label>
-          <input type="text" id="nazioneSearch" placeholder="Country" onkeyup="updateDropdown('nazioneSelect', this.value)">
-          <select id="nazioneSelect" onchange="filterTable()">
+          <label for="countrySearch">Search Country:</label>
+          <input type="text" id="countrySearch" placeholder="Country" onkeyup="updateDropdown('countrySelect', this.value)">
+          <select id="countrySelect" onchange="filterTable()">
             <option value="">All</option>
           </select>
         </div>
       </div>
 
       <div class="range-filters" id="rangeFilters"></div>
-    </div>
-  </div>
 
-  <div class="reset-wrapper-top">
-    <button id="resetButton" onclick="resetFilters()">Reset</button>
+      <div class="reset-wrapper">
+        <button id="resetButton" onclick="resetFilters()">Reset</button>
+      </div>
+    </div>
   </div>
 
   <div class="result-count" id="resultCount">Results shown: 0</div>
 
   <div class="table-container">
-    <table id="btpTable">
+    <table id="bondTable">
       <thead></thead>
       <tbody></tbody>
     </table>
@@ -232,7 +231,7 @@
   <script>
     let tableData = [];
     let originalData = [];
-    let fullNazioneList = [];
+    let fullCountryList = [];
     let sortCol = -1;
     let sortAsc = true;
     let minMaxMap = {};
@@ -245,15 +244,15 @@
       tableData = data;
       originalData = [...data];
 
-      const thead = document.querySelector("#btpTable thead");
+      const thead = document.querySelector("#bondTable thead");
       thead.innerHTML = "<tr>" + header.map((col, i) => {
         const isSortable = i !== 0 && i !== header.length - 1;
         return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
       }).join("") + "</tr>";
 
-      const nazioneIndex = header.length - 1;
-      fullNazioneList = [...new Set(data.map(row => row[nazioneIndex]))].sort();
-      populateSelect("nazioneSelect", fullNazioneList);
+      const countryIndex = header.length - 1;
+      fullCountryList = [...new Set(data.map(row => row[countryIndex]))].sort();
+      populateSelect("countrySelect", fullCountryList);
 
       createRangeFilters(header);
       renderTable(data);
@@ -262,7 +261,7 @@
     function createRangeFilters(header) {
       const container = document.getElementById("rangeFilters");
       container.innerHTML = "";
-      const numericIndices = [1, 2, 3, 5, 6, 7];
+      const numericIndices = [1, 2, 3, 5, 6, 7]; // Adjust if your CSV columns change
       numericIndices.forEach((i) => {
         const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
         const minVal = Math.floor(Math.min(...values));
@@ -271,7 +270,7 @@
         const div = document.createElement("div");
         div.className = "range-group";
         div.innerHTML = `
-          <label><strong>${header[i]}</strong></label>
+          <label>${header[i]}</label>
           <div class="range-values">Min: <span id="val-min-${i}">${minVal}</span> - Max: <span id="val-max-${i}">${maxVal}</span></div>
           <input type="range" id="min-${i}" min="${minVal}" max="${maxVal}" value="${minVal}" oninput="updateRange(${i})">
           <input type="range" id="max-${i}" min="${minVal}" max="${maxVal}" value="${maxVal}" oninput="updateRange(${i})">
@@ -290,9 +289,9 @@
 
     function resetFilters() {
       document.getElementById("isinSearch").value = "";
-      document.getElementById("nazioneSearch").value = "";
-      document.getElementById("nazioneSelect").value = "";
-      updateDropdown('nazioneSelect', '');
+      document.getElementById("countrySearch").value = "";
+      document.getElementById("countrySelect").value = "";
+      updateDropdown('countrySelect', '');
 
       const numericIndices = [1, 2, 3, 5, 6, 7];
       numericIndices.forEach(i => {
@@ -319,24 +318,24 @@
     }
 
     function updateDropdown(id, searchValue) {
-      const list = fullNazioneList;
+      const list = fullCountryList;
       const filtered = list.filter(v => v.toLowerCase().includes(searchValue.toLowerCase()));
       populateSelect(id, filtered);
     }
 
     function renderTable(data) {
-      const tbody = document.querySelector("#btpTable tbody");
+      const tbody = document.querySelector("#bondTable tbody");
       tbody.innerHTML = data.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join("")}</tr>`).join("");
       document.getElementById("resultCount").textContent = "Results shown: " + data.length;
     }
 
     function filterTable() {
       const isinVal = document.getElementById("isinSearch").value.toLowerCase().trim();
-      const nazVal = document.getElementById("nazioneSelect").value;
-      const nazioneIndex = document.querySelector("#btpTable thead tr").children.length - 1;
+      const countryVal = document.getElementById("countrySelect").value;
+      const countryIndex = document.querySelector("#bondTable thead tr").children.length - 1;
       let filtered = [...originalData];
       if (isinVal) filtered = filtered.filter(row => row[0].toLowerCase().trim().includes(isinVal));
-      if (nazVal) filtered = filtered.filter(row => row[nazioneIndex] === nazVal);
+      if (countryVal) filtered = filtered.filter(row => row[countryIndex] === countryVal);
 
       const numericIndices = [1, 2, 3, 5, 6, 7];
       numericIndices.forEach(i => {
@@ -344,37 +343,60 @@
         const max = parseFloat(document.getElementById(`max-${i}`).value);
         filtered = filtered.filter(row => {
           const val = parseFloat(row[i]);
-          return !isNaN(val) && val >= min && val <= max;
+          return val >= min && val <= max;
         });
       });
 
-      renderTable(filtered);
+      tableData = filtered;
+      if (sortCol >= 0) sortTable(sortCol, true);
+      else renderTable(filtered);
     }
 
-    function sortTable(index) {
-      if (index === 0 || index === document.querySelector("#btpTable thead tr").children.length - 1) return;
-
-      if (sortCol === index) {
-        sortAsc = !sortAsc;
-      } else {
-        if (sortCol >= 0) document.getElementById(`icon-${sortCol}`).textContent = "⇅";
-        sortCol = index;
-        sortAsc = true;
+    function sortTable(colIndex, keepOrder = false) {
+      if (!keepOrder) {
+        if (sortCol === colIndex) sortAsc = !sortAsc;
+        else {
+          sortCol = colIndex;
+          sortAsc = true;
+        }
       }
-      const icon = document.getElementById(`icon-${index}`);
-      icon.textContent = sortAsc ? "🔼" : "🔽";
+      const iconEls = document.querySelectorAll(".sort-icon");
+      iconEls.forEach(icon => (icon.textContent = "⇅"));
+      document.getElementById(`icon-${colIndex}`).textContent = sortAsc ? "▲" : "▼";
 
-      originalData.sort((a, b) => {
-        const valA = isNaN(a[index]) ? a[index] : parseFloat(a[index]);
-        const valB = isNaN(b[index]) ? b[index] : parseFloat(b[index]);
-        if (valA < valB) return sortAsc ? -1 : 1;
-        if (valA > valB) return sortAsc ? 1 : -1;
-        return 0;
+      tableData.sort((a, b) => {
+        const valA = a[colIndex];
+        const valB = b[colIndex];
+
+        // Numeric or string comparison
+        const numA = parseFloat(valA);
+        const numB = parseFloat(valB);
+
+        if (!isNaN(numA) && !isNaN(numB)) {
+          return sortAsc ? numA - numB : numB - numA;
+        } else {
+          if (valA < valB) return sortAsc ? -1 : 1;
+          if (valA > valB) return sortAsc ? 1 : -1;
+          return 0;
+        }
       });
-      filterTable();
+      renderTable(tableData);
     }
 
-    loadCSV();
+    // Language switching redirects to the appropriate URL (adjust URLs as needed)
+    function changeLanguage(lang) {
+      const baseUrl = window.location.origin + window.location.pathname;
+      // Assuming your files are named index_en.html, index_fr.html, etc.
+      let newUrl = baseUrl.replace(/index_[a-z]{2}\.html$/, `index_${lang}.html`);
+      if (newUrl === baseUrl) {
+        // fallback if no language suffix in current url:
+        newUrl = baseUrl.replace(/\.html$/, `_` + lang + `.html`);
+      }
+      window.location.href = newUrl;
+    }
+
+    // Initialize on load
+    window.onload = loadCSV;
   </script>
 </body>
 </html>
