@@ -68,11 +68,13 @@
     .inline-group {
       display: flex;
       align-items: center;
+      gap: 5px;
     }
 
     .inline-group label {
       font-weight: bold;
       margin-right: 5px;
+      white-space: nowrap;
     }
 
     select, input[type="text"], input[type="range"] {
@@ -119,6 +121,12 @@
       margin: 10px 0;
     }
 
+    .reset-wrapper-top {
+      text-align: right;
+      margin-top: 10px;
+      margin-bottom: -10px;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -159,23 +167,16 @@
         overflow-x: auto;
       }
 
-      #resetButton {
-        display: block;
-        margin-left: auto;
-        margin-right: 0;
+      .reset-wrapper-top {
+        text-align: center;
+        margin-bottom: 0;
       }
 
-      .reset-wrapper {
-        text-align: right;
-        margin-top: -10px;
-      }
-    }
-
-    @media (min-width: 769px) {
-      .reset-wrapper {
-        position: absolute;
-        bottom: 10px;
-        right: 10px;
+      .language-selector {
+        position: static;
+        text-align: center;
+        margin-top: 10px;
+        margin-bottom: 10px;
       }
     }
   </style>
@@ -186,36 +187,49 @@
   <div class="language-selector">
     <span>Language</span>
     <img src="https://flagcdn.com/w20/gb.png" alt="English" title="English">
-    <img src="https://flagcdn.com/w20/fr.png" alt="Français" title="Français">
-    <img src="https://flagcdn.com/w20/de.png" alt="Deutsch" title="Deutsch">
-    <img src="https://flagcdn.com/w20/es.png" alt="Español" title="Español">
-    <img src="https://flagcdn.com/w20/it.png" alt="Italiano" title="Italiano">
+    <img src="https://flagcdn.com/w20/fr.png" alt="French" title="French">
+    <img src="https://flagcdn.com/w20/de.png" alt="German" title="German">
+    <img src="https://flagcdn.com/w20/es.png" alt="Spanish" title="Spanish">
+    <img src="https://flagcdn.com/w20/it.png" alt="Italian" title="Italian">
   </div>
 
   <div class="filter-info-mobile">Scroll to view filters</div>
   <div class="filter-section-wrapper">
     <div class="filter-container" id="filterContainer">
+
       <div class="filter-group">
-        <label for="isinSearch">Search ISIN:</label>
-        <input type="text" id="isinSearch" placeholder="Search ISIN" onkeyup="filterTable()">
+        <div class="inline-group">
+          <label for="isinSearch"><strong>Search ISIN:</strong></label>
+          <input type="text" id="isinSearch" placeholder="Search ISIN" onkeyup="filterTable()">
+        </div>
       </div>
 
       <div class="filter-group">
         <div class="inline-group">
-          <label for="nazioneSearch">Search Country:</label>
+          <label for="nazioneSearch"><strong>Search Country:</strong></label>
           <input type="text" id="nazioneSearch" placeholder="Country" onkeyup="updateDropdown('nazioneSelect', this.value)">
           <select id="nazioneSelect" onchange="filterTable()">
+            <option value="">All</option>
+          </select>
+          <!-- New Market filter -->
+          <label for="mercatoSelect"><strong>Market:</strong></label>
+          <select id="mercatoSelect" onchange="filterTable()">
+            <option value="">All</option>
+          </select>
+          <!-- New Currency filter -->
+          <label for="valutaSelect"><strong>Currency:</strong></label>
+          <select id="valutaSelect" onchange="filterTable()">
             <option value="">All</option>
           </select>
         </div>
       </div>
 
       <div class="range-filters" id="rangeFilters"></div>
-
-      <div class="reset-wrapper">
-        <button id="resetButton" onclick="resetFilters()">Reset</button>
-      </div>
     </div>
+  </div>
+
+  <div class="reset-wrapper-top">
+    <button id="resetButton" onclick="resetFilters()">Reset</button>
   </div>
 
   <div class="result-count" id="resultCount">Results shown: 0</div>
@@ -231,6 +245,8 @@
     let tableData = [];
     let originalData = [];
     let fullNazioneList = [];
+    let fullMercatoList = [];
+    let fullValutaList = [];
     let sortCol = -1;
     let sortAsc = true;
     let minMaxMap = {};
@@ -245,13 +261,19 @@
 
       const thead = document.querySelector("#btpTable thead");
       thead.innerHTML = "<tr>" + header.map((col, i) => {
-        const isSortable = i !== 0 && i !== header.length - 1;
+        const isSortable = i !== 0 && i !== 4 && i !== 9 && i !== 10 && i !== header.length - 1;
         return `<th${isSortable ? ` onclick=\"sortTable(${i})\"` : ''}>${col}${isSortable ? `<span class=\"sort-icon\" id=\"icon-${i}\">⇅</span>` : ''}</th>`;
       }).join("") + "</tr>";
 
       const nazioneIndex = header.length - 1;
       fullNazioneList = [...new Set(data.map(row => row[nazioneIndex]))].sort();
       populateSelect("nazioneSelect", fullNazioneList);
+
+      // New unique lists for Market (column 9) and Currency (column 10)
+      fullMercatoList = [...new Set(data.map(row => row[9]))].sort();
+      fullValutaList = [...new Set(data.map(row => row[10]))].sort();
+      populateSelect("mercatoSelect", fullMercatoList);
+      populateSelect("valutaSelect", fullValutaList);
 
       createRangeFilters(header);
       renderTable(data);
@@ -260,7 +282,7 @@
     function createRangeFilters(header) {
       const container = document.getElementById("rangeFilters");
       container.innerHTML = "";
-      const numericIndices = [1, 2, 3, 5, 6, 7];
+      const numericIndices = [1, 2, 3, 6, 7, 8];
       numericIndices.forEach((i) => {
         const values = originalData.map(row => parseFloat(row[i])).filter(v => !isNaN(v));
         const minVal = Math.floor(Math.min(...values));
@@ -269,7 +291,7 @@
         const div = document.createElement("div");
         div.className = "range-group";
         div.innerHTML = `
-          <label>${header[i]}</label>
+          <label><strong>${header[i]}</strong></label>
           <div class="range-values">Min: <span id="val-min-${i}">${minVal}</span> - Max: <span id="val-max-${i}">${maxVal}</span></div>
           <input type="range" id="min-${i}" min="${minVal}" max="${maxVal}" value="${minVal}" oninput="updateRange(${i})">
           <input type="range" id="max-${i}" min="${minVal}" max="${maxVal}" value="${maxVal}" oninput="updateRange(${i})">
@@ -278,48 +300,77 @@
       });
     }
 
-    function updateRange(i) {
-      const min = document.getElementById(`min-${i}`).value;
-      const max = document.getElementById(`max-${i}`).value;
-      document.getElementById(`val-min-${i}`).textContent = min;
-      document.getElementById(`val-max-${i}`).textContent = max;
+    function updateRange(index) {
+      const minRange = document.getElementById(`min-${index}`);
+      const maxRange = document.getElementById(`max-${index}`);
+
+      if (parseInt(minRange.value) > parseInt(maxRange.value)) {
+        if (event.target.id === `min-${index}`) {
+          maxRange.value = minRange.value;
+        } else {
+          minRange.value = maxRange.value;
+        }
+      }
+      document.getElementById(`val-min-${index}`).textContent = minRange.value;
+      document.getElementById(`val-max-${index}`).textContent = maxRange.value;
+
       filterTable();
     }
 
-    function resetFilters() {
-      document.getElementById("isinSearch").value = "";
-      document.getElementById("nazioneSearch").value = "";
-      document.getElementById("nazioneSelect").value = "";
-      updateDropdown('nazioneSelect', '');
-
-      const numericIndices = [1, 2, 3, 5, 6, 7];
-      numericIndices.forEach(i => {
-        const { min, max } = minMaxMap[i];
-        document.getElementById(`min-${i}`).value = min;
-        document.getElementById(`max-${i}`).value = max;
-        document.getElementById(`val-min-${i}`).textContent = min;
-        document.getElementById(`val-max-${i}`).textContent = max;
-      });
-
-      tableData = [...originalData];
-      renderTable(tableData);
-    }
-
-    function populateSelect(id, values) {
-      const select = document.getElementById(id);
+    function populateSelect(selectId, options) {
+      const select = document.getElementById(selectId);
       select.innerHTML = '<option value="">All</option>';
-      values.forEach(val => {
-        const opt = document.createElement("option");
-        opt.value = val;
-        opt.textContent = val;
-        select.appendChild(opt);
+      options.forEach(opt => {
+        select.innerHTML += `<option value="${opt}">${opt}</option>`;
       });
     }
 
-    function updateDropdown(id, searchValue) {
-      const list = fullNazioneList;
-      const filtered = list.filter(v => v.toLowerCase().includes(searchValue.toLowerCase()));
-      populateSelect(id, filtered);
+    function updateDropdown(selectId, filterText) {
+      const select = document.getElementById(selectId);
+      filterText = filterText.toLowerCase();
+      const options = [...select.options];
+      const filtered = options.filter(option => option.value.toLowerCase().includes(filterText) || option.text.toLowerCase().includes(filterText));
+      select.innerHTML = '<option value="">All</option>';
+      filtered.forEach(opt => {
+        if(opt.value !== "") {
+          select.innerHTML += `<option value="${opt.value}">${opt.text}</option>`;
+        }
+      });
+      filterTable();
+    }
+
+    function filterTable() {
+      const isinFilter = document.getElementById("isinSearch").value.toLowerCase();
+      const nazioneFilter = document.getElementById("nazioneSelect").value;
+      const mercatoFilter = document.getElementById("mercatoSelect").value;
+      const valutaFilter = document.getElementById("valutaSelect").value;
+
+      const filteredData = originalData.filter(row => {
+        const isinMatch = row[0].toLowerCase().includes(isinFilter);
+        const nazioneMatch = nazioneFilter === "" || row[row.length - 1] === nazioneFilter;
+        const mercatoMatch = mercatoFilter === "" || row[9] === mercatoFilter;
+        const valutaMatch = valutaFilter === "" || row[10] === valutaFilter;
+
+        // Numeric ranges
+        const numericIndices = [1, 2, 3, 6, 7, 8];
+        let numericMatch = true;
+        for (const i of numericIndices) {
+          const val = parseFloat(row[i]);
+          if (isNaN(val)) {
+            numericMatch = false;
+            break;
+          }
+          const minVal = parseInt(document.getElementById(`min-${i}`).value);
+          const maxVal = parseInt(document.getElementById(`max-${i}`).value);
+          if (val < minVal || val > maxVal) {
+            numericMatch = false;
+            break;
+          }
+        }
+        return isinMatch && nazioneMatch && mercatoMatch && valutaMatch && numericMatch;
+      });
+
+      renderTable(filteredData);
     }
 
     function renderTable(data) {
@@ -337,26 +388,21 @@
       document.getElementById("resultCount").textContent = `Results shown: ${data.length}`;
     }
 
-    function filterTable() {
-      const isinFilter = document.getElementById("isinSearch").value.toLowerCase();
-      const nazioneFilter = document.getElementById("nazioneSelect").value.toLowerCase();
+    function resetFilters() {
+      document.getElementById("isinSearch").value = "";
+      document.getElementById("nazioneSearch").value = "";
+      populateSelect("nazioneSelect", fullNazioneList);
+      document.getElementById("nazioneSelect").value = "";
+      document.getElementById("mercatoSelect").value = "";
+      document.getElementById("valutaSelect").value = "";
 
-      const numericIndices = [1, 2, 3, 5, 6, 7];
-      const rangeFilters = numericIndices.map(i => ({
-        min: parseFloat(document.getElementById(`min-${i}`).value),
-        max: parseFloat(document.getElementById(`max-${i}`).value)
-      }));
-
-      tableData = originalData.filter(row => {
-        const isinMatch = row[0].toLowerCase().includes(isinFilter);
-        const nazioneMatch = nazioneFilter === "" || row[row.length - 1].toLowerCase() === nazioneFilter;
-        const rangesMatch = numericIndices.every((i, idx) => {
-          const val = parseFloat(row[i]);
-          return !isNaN(val) && val >= rangeFilters[idx].min && val <= rangeFilters[idx].max;
-        });
-        return isinMatch && nazioneMatch && rangesMatch;
-      });
-      renderTable(tableData);
+      for (const i in minMaxMap) {
+        document.getElementById(`min-${i}`).value = minMaxMap[i].min;
+        document.getElementById(`max-${i}`).value = minMaxMap[i].max;
+        document.getElementById(`val-min-${i}`).textContent = minMaxMap[i].min;
+        document.getElementById(`val-max-${i}`).textContent = minMaxMap[i].max;
+      }
+      filterTable();
     }
 
     function sortTable(colIndex) {
@@ -368,17 +414,31 @@
       }
 
       tableData.sort((a, b) => {
-        const valA = isNaN(a[colIndex]) ? a[colIndex].toLowerCase() : parseFloat(a[colIndex]);
-        const valB = isNaN(b[colIndex]) ? b[colIndex].toLowerCase() : parseFloat(b[colIndex]);
+        let valA = a[colIndex];
+        let valB = b[colIndex];
+
+        const numA = parseFloat(valA.replace(',', '.'));
+        const numB = parseFloat(valB.replace(',', '.'));
+        if (!isNaN(numA) && !isNaN(numB)) {
+          valA = numA;
+          valB = numB;
+        } else {
+          valA = valA.toLowerCase();
+          valB = valB.toLowerCase();
+        }
         if (valA < valB) return sortAsc ? -1 : 1;
         if (valA > valB) return sortAsc ? 1 : -1;
         return 0;
       });
 
-      document.querySelectorAll("th .sort-icon").forEach(el => el.textContent = "⇅");
-      document.getElementById(`icon-${colIndex}`).textContent = sortAsc ? "↑" : "↓";
-
       renderTable(tableData);
+
+      // Update sort icons
+      document.querySelectorAll("th .sort-icon").forEach(icon => icon.textContent = "⇅");
+      const icon = document.getElementById(`icon-${colIndex}`);
+      if (icon) {
+        icon.textContent = sortAsc ? "↑" : "↓";
+      }
     }
 
     window.onload = loadCSV;
