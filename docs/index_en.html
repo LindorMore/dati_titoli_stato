@@ -270,17 +270,17 @@
     }
   }
 
-  if (header === "Duration") {
-    // es. "27 anni e 6 mesi"
-    const regex = /(\d+)\s+anni?\s+e\s+(\d+)\s+mesi?/i;
-    const match = value.match(regex);
-    if (match) {
-      const years = match[1];
-      const months = match[2];
-      return `${years} year${years === "1" ? "" : "s"} and ${months} month${months === "1" ? "" : "s"}`;
-    }
-    return value;
+ if (header === "Duration") {
+  const regex = /(\d+)\s+anni?\s+e\s+(\d+)\s+mesi?/i;
+  const match = value.match(regex);
+  if (match) {
+    const years = parseInt(match[1]);
+    const months = parseInt(match[2]);
+    return `${years}.${months}`;
   }
+  return value;
+}
+
 
   return value;
 }
