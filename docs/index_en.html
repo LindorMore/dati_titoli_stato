@@ -270,17 +270,15 @@
     }
   }
 
- if (header === "Duration") {
+  if (header === "Durata (anni e mesi)") {
     // es. "27 anni e 6 mesi"
-    // estrai numeri e parole per anni e mesi e traduci
     const regex = /(\d+)\s+anni?\s+e\s+(\d+)\s+mesi?/i;
     const match = value.match(regex);
     if (match) {
       const years = match[1];
       const months = match[2];
-      return `${years} year/s and ${months} month/s`;
+      return `${years} year${years === "1" ? "" : "s"} and ${months} month${months === "1" ? "" : "s"}`;
     }
-    // Se non corrisponde al formato previsto, restituisci il valore originale
     return value;
   }
 
