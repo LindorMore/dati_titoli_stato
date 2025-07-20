@@ -101,13 +101,7 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
 
     anni = mesi_alla_scadenza // 12
     mesi = mesi_alla_scadenza % 12
-    durata_str = ""
-    if anni > 0:
-        durata_str += f"{anni} anni"
-    if mesi > 0:
-        durata_str += f" e {mesi} mesi"
-    if durata_str == "":
-        durata_str = "0 mesi"
+    durata_custom = f"{anni},{mesi}"
 
     return [
         isin,
@@ -116,7 +110,7 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
         round(cedola_annua_su_prezzo, 2),
         cedola_tipo,
         scadenza_data.strftime("%d/%m/%Y"),
-        durata_str,
+        durata_custom,
         round(rendimento_totale, 2),
         round(rendimento_annuo, 2),
         mercato,
