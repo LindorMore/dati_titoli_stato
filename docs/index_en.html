@@ -270,12 +270,18 @@
     }
   }
 
-  if (header === "Duration") {
-    const anniMatch = value.match(/(\d+)\s*anni?/i);
-    const mesiMatch = value.match(/(\d+)\s*mesi?/i);
-    const anni = anniMatch ? anniMatch[1] : "0";
-    const mesi = mesiMatch ? mesiMatch[1] : "0";
-    return `${anni} year${anni === "1" ? "" : "/s"} and ${mesi} month${mesi === "1" ? "" : "/s"}`;
+ if (header === "Duration") {
+    // es. "27 anni e 6 mesi"
+    // estrai numeri e parole per anni e mesi e traduci
+    const regex = /(\d+)\s+anni?\s+e\s+(\d+)\s+mesi?/i;
+    const match = value.match(regex);
+    if (match) {
+      const years = match[1];
+      const months = match[2];
+      return `${years} year/s and ${months} month/s`;
+    }
+    // Se non corrisponde al formato previsto, restituisci il valore originale
+    return value;
   }
 
   return value;
