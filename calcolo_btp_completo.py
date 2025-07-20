@@ -105,7 +105,7 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
     if anni > 0:
         durata_str += f"{anni}"
     if mesi > 0:
-        durata_str += f" , {mesi}"
+        durata_str += f".{mesi}"
     if durata_str == "":
         durata_str = "0"
 
