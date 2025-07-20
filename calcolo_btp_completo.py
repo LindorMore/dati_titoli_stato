@@ -10,7 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import os
 
 # === CONFIG ===
-ISIN_LIST = ["XS2571924070", "XS1837994794", "US900123BB58", "XS2201851685", "US77586TAE64","IT0005484552"]
+ISIN_LIST = ["XS2571924070", "XS1837994794", "US900123BB58", "XS2201851685", "US77586TAE64", "IT0005484552"]
 CSV_FILE = "dati_btp.csv"
 GITHUB_TOKEN = os.environ["MY_GITHUB_TOKEN"]
 REPO_NAME = "LindorMore/dati_titoli_stato"
@@ -28,7 +28,7 @@ wait = WebDriverWait(driver, 15)
 def estrai_dati(isin):
     url = f"https://www.borsaitaliana.it/borsa/obbligazioni/mot/btp/scheda/{isin}.html"
     driver.get(url)
-    
+
     try:
         prezzo_live_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[1]/article/div/div/div[2]/div/span[1]/strong'
         prezzo_chiusura_xpath = '//*[@id="fullcontainer"]/main/section/div[4]/div[5]/article/div/div[2]/div[1]/table/tbody/tr[1]/td[2]/span'
@@ -46,14 +46,14 @@ def estrai_dati(isin):
 
         cedola_semestrale = None
         cedola_annua = None
-        
+
         try:
             cedola_testo = driver.find_element(By.XPATH, cedola_semestrale_xpath).text.strip()
             if cedola_testo != "":
                 cedola_semestrale = float(cedola_testo.replace(",", ".").replace("%", ""))
         except:
             pass
-        
+
         if cedola_semestrale is None:
             try:
                 cedola_testo = driver.find_element(By.XPATH, cedola_annua_xpath).text.strip()
@@ -61,7 +61,7 @@ def estrai_dati(isin):
                     cedola_annua = float(cedola_testo.replace(",", ".").replace("%", ""))
             except:
                 pass
-        
+
         if cedola_semestrale is None and cedola_annua is None:
             raise Exception("Cedola non trovata (né semestrale né annua)")
 
@@ -99,15 +99,7 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
     anni_alla_scadenza = mesi_alla_scadenza / 12
     rendimento_annuo = rendimento_totale / anni_alla_scadenza if anni_alla_scadenza > 0 else 0
 
-    anni = mesi_alla_scadenza // 12
-    mesi = mesi_alla_scadenza % 12
-    durata_str = ""
-    if anni > 0:
-        durata_str += f"{anni} anni"
-    if mesi > 0:
-        durata_str += f" e {mesi} mesi"
-    if durata_str == "":
-        durata_str = "0 mesi"
+    durata_decimale = round(anni_alla_scadenza, 2)
 
     return [
         isin,
@@ -116,7 +108,7 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
         round(cedola_annua_su_prezzo, 2),
         cedola_tipo,
         scadenza_data.strftime("%d/%m/%Y"),
-        durata_str,
+        durata_decimale,
         round(rendimento_totale, 2),
         round(rendimento_annuo, 2),
         mercato,
@@ -127,7 +119,7 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
 # === ESTRAZIONE E CALCOLO ===
 dati_finali = [[
     "ISIN", "Prezzo", "Cedola Semestrale Lorda", "Cedola Annua Lorda %", "Tipo Cedola",
-    "Data di Scadenza", "Durata (anni e mesi)", "Rendimento Totale Lordo %", "Rendimento lordo Annuo %",
+    "Data di Scadenza", "Durata (anni)", "Rendimento Totale Lordo %", "Rendimento lordo Annuo %",
     "Mercato", "Valuta", "Nazione"
 ]]
 
