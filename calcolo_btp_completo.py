@@ -96,14 +96,18 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
         cedola_annua_su_prezzo = (cedola_annua / prezzo) * 100
 
     rendimento_totale = ((totale_cedole + 100 - prezzo) / prezzo) * 100
+    anni_alla_scadenza = mesi_alla_scadenza / 12
+    rendimento_annuo = rendimento_totale / anni_alla_scadenza if anni_alla_scadenza > 0 else 0
 
     anni = mesi_alla_scadenza // 12
     mesi = mesi_alla_scadenza % 12
-
-    # Formato anni,mesi con virgola come separatore decimale
-    durata_str = f"{anni},{mesi}"
-
-    rendimento_annuo = rendimento_totale / (anni + mesi / 12) if (anni + mesi / 12) > 0 else 0
+    durata_str = ""
+    if anni > 0:
+        durata_str += f"{anni} anni"
+    if mesi > 0:
+        durata_str += f" e {mesi} mesi"
+    if durata_str == "":
+        durata_str = "0 mesi"
 
     return [
         isin,
