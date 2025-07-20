@@ -86,6 +86,7 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
     oggi = datetime.now()
     mesi_alla_scadenza = (scadenza_data.year - oggi.year) * 12 + scadenza_data.month - oggi.month
     n_cedole = mesi_alla_scadenza // 6
+    
     if cedola_semestrale is not None:
         totale_cedole = cedola_semestrale * n_cedole
         cedola_tipo = "Semestrale"
@@ -101,7 +102,8 @@ def calcoli(isin, prezzo, cedola_semestrale, cedola_annua, scadenza_data, nazion
 
     anni = mesi_alla_scadenza // 12
     mesi = mesi_alla_scadenza % 12
-    durata_custom = f"{anni},{mesi}"
+    # Formattazione durata come "anni,mm" (con due cifre per i mesi)
+    durata_custom = f"{anni},{mesi:02d}"
 
     return [
         isin,
